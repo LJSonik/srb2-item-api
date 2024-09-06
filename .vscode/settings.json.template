@@ -1,0 +1,35 @@
+// This is a template for the VS Code settings I use for this project.
+// Using these settings is highly recommended if you use the Sumneko Lua extension.
+//
+// If you want to use these settings, just copy this file as "settings.json",
+// replace the value for Lua.workspace.library with the appropriate path,
+// (assuming you have already properly installed the extension and the SRB2 definition files).
+// then tweak it as you like.
+
+{
+    "editor.insertSpaces": false,
+    "Lua.runtime.path": [
+        "PK3/Lua/?.lua",
+        "PK3/Lua/Libraries/?.lua",
+    ],
+    "Lua.runtime.special": {
+        "ljrequire": "require"
+    },
+    "Lua.workspace.library": [
+        "C:/path/to/your/definition/files/SRB2-2.2/library"
+    ],
+    "Lua.workspace.ignoreDir": [
+        ".git",
+        ".vscode",
+    ],
+    "Lua.diagnostics.disable": [
+        "param-type-mismatch",
+        "assign-type-mismatch",
+        "return-type-mismatch",
+        "cast-local-type",
+        "missing-fields",
+        "need-check-nil",
+    ],
+    "Lua.type.weakNilCheck": true,
+    "Lua.type.weakUnionCheck": true,
+}

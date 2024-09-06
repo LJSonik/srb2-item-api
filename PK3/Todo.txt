@@ -1,0 +1,63 @@
+Important
+=========
+- Fix item stored when inventory full
+- Take carried again item when using action
+- Fix item stacking in containers
+- Remove all instances of the chatactive hack
+- Fix P_Random called in visual tickers
+- Ensure mod.sendNetCommand is used instead of nc.send
+
+Essential features
+==================
+- Options
+- Hunger
+- Thirst
+- Status icons
+- Icons when obtaining items
+- Day/night cycle
+- Help menu
+- Plant growth
+
+Normal
+======
+- Player action animations?
+- ItemDef.carriedModelScale?
+- Item piles?
+- ItemDef.onPlace event?
+- Per-state actions
+- Energy?
+- Handle duplicate IDs
+- Weather
+- Administration tools
+- Item placement indicator?
+- Permission system
+- Tutorial?
+- Per-character item descriptions?
+- Default model transform?
+- Ambient sounds
+- Print warning when multiple actions with the same mobj type/state pair are given?
+
+Fixes
+=====
+- Do not run actions when the serverside code picks the wrong mobj
+- Cancel action selection if target distance is too high
+- Cancel action if conditions are no longer met (distance, target, carried item, ...)
+- Fix code still using ActionSelection.targetType
+- Store local mobj tickers in a separate list
+- Fix mobj tickers running three times on spawn due to pre-ticker
+- Mobj tickers limited to TICRATE frequencies
+- Unload tickers on map change
+- Fix item placement on slopes? (square hitboxes)
+- Ensure net command order?
+- Ignore incoming net commands when a new file is added
+- Remove hack in ljrequire
+
+Optimisations
+=============
+- Add a load balancer for mobj tickers?
+- Culling
+	- Models
+	- Particle pools
+	- Mobjs?
+- Avoid validity check for mobj tickers?
+- Optimise action filtering in mod.canPlayerUseActionsOnMobj?
