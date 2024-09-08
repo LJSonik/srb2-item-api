@@ -164,7 +164,9 @@ end)
 
 ---@param p player_t
 addHook("PlayerSpawn", function(p)
-	if not p.itemapi_initialised then
+	if p.itemapi_initialised then
+		p.itemapi_hunger = mod.MAX_HUNGER / 4
+	else
 		mod.initialisePlayer(p)
 	end
 
