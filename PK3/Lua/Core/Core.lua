@@ -176,7 +176,7 @@ addHook("PlayerSpawn", function(p)
 	end
 
 	-- !!!! DBG
-	p.itemapi_inventory:add("bush_seed", 10)
+	-- p.itemapi_inventory:add("bush_seed", 10)
 	-- p.itemapi_hunger = mod.MAX_HUNGER * 34/100
 	-- local fire = mod.placeItem(p, "campfire")
 	-- mod.campfire_addItemToSpit(fire, "raw_meat")
