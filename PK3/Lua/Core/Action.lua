@@ -2,28 +2,34 @@
 local mod = itemapi
 
 
----@class itemapi.ItemActionDef
+---@class itemapi.ActionDef
+---@field name string
+---@field duration? tic_t
+---
+---@field animations  itemapi.ActionAnimationDef[]
+---@field animation?  itemapi.ActionAnimationDef
+---@field animation1? itemapi.ActionAnimationDef
+---@field animation2? itemapi.ActionAnimationDef
+---@field animation3? itemapi.ActionAnimationDef
+
+---@class itemapi.ItemActionDef : itemapi.ActionDef
 ---@field name string
 ---@field requiredGroundItem? string
 ---@field condition? fun(): boolean
 ---@field action fun(player: player_t)
----@field duration? tic_t
 
----@class itemapi.GroundItemActionDef
+---@class itemapi.GroundItemActionDef : itemapi.ActionDef
 ---@field name string
 ---@field requiredCarriedItem? string
 ---@field condition? fun(): boolean
 ---@field selectSpot? boolean
 ---@field action fun(player: player_t, mobj: mobj_t, groundItemDef: itemapi.ItemDef, carriedItemDef: itemapi.ItemDef?, spotIndex: integer?)
----@field duration? tic_t
 
----@class itemapi.MobjActionDef
+---@class itemapi.MobjActionDef : itemapi.ActionDef
 ---@field mobjType mobjtype_t
 ---@field state? statenum_t
 ---@field name string
 ---@field action fun(player: player_t, mobj: mobj_t)
----@field duration? tic_t
----@field animation? itemapi.ActionAnimationDef
 
 ---@class itemapi.Action
 ---@field type "carried_item"|"ground_item"|"mobj"
@@ -45,7 +51,7 @@ mod.mobjActionDefs = {}
 
 
 ---@param player player_t
----@return nil|itemapi.ItemActionDef|itemapi.GroundItemActionDef|itemapi.MobjActionDef
+---@return itemapi.ActionDef?
 function mod.getActionDefFromPlayer(player)
 	local action = player.itemapi_action
 	local actionType = action.type
@@ -91,6 +97,14 @@ function mod.addMobjAction(mobjType, def)
 	def.mobjType = mobjType
 	mod.mobjActionDefs[mobjType] = $ or {}
 	mod.mobjActionDefs[mobjType][def.state or S_NULL] = def
+
+	mod.parseSugarArray(def, "animations", "animation")
+
+	for i, anim in ipairs(def.animations) do
+		if type(anim) == "string" then
+			def.animations[i] = mod.actionAnimationDefs[anim]
+		end
+	end
 
 	-- Required to ensure the mobjs are synced in servers
 	-- and can be detected when searching for nearby objects

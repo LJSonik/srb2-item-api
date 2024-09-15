@@ -5,9 +5,9 @@ local mod = itemapi
 ---@class itemapi.ActionAnimationDef
 ---@field id    string
 ---@field index integer
----@field start fun(mobj: mobj_t, action: itemapi.Action)
----@field tick  fun(mobj: mobj_t, action: itemapi.Action)
----@field stop  fun(mobj: mobj_t, action: itemapi.Action)
+---@field start fun(mobj: mobj_t, state: table, params: table)
+---@field tick  fun(mobj: mobj_t, state: table, params: table)
+---@field stop  fun(mobj: mobj_t, state: table, params: table)
 
 
 ---@type { [string|integer]: itemapi.ActionAnimationDef }
@@ -32,24 +32,64 @@ end
 function mod.startPlayerActionAnimation(player)
 	local action = player.itemapi_action
 	local actionDef = mod.getActionDefFromPlayer(player)
-	local animDef = mod.actionAnimationDefs[actionDef.animation]
-	animDef.start(action.target, action)
+
+	local mobj
+	if action.type == "carried_item" then
+		mobj = player.itemapi_carrySlots["right_hand"].mobj
+	else
+		mobj = action.target
+	end
+
+	action.animations = {}
+
+	for _, animParams in ipairs(actionDef.animations) do
+		local anim = {}
+		table.insert(action.animations, anim)
+
+		local animDef = mod.actionAnimationDefs[animParams.type]
+		if animDef.start then
+			animDef.start(mobj, anim, animParams)
+		end
+	end
 end
 
 ---@param player player_t
 function mod.updatePlayerActionAnimation(player)
 	local action = player.itemapi_action
 	local actionDef = mod.getActionDefFromPlayer(player)
-	local animDef = mod.actionAnimationDefs[actionDef.animation]
-	animDef.tick(action.target, action)
+
+	local mobj
+	if action.type == "carried_item" then
+		mobj = player.itemapi_carrySlots["right_hand"].mobj
+	else
+		mobj = action.target
+	end
+
+	for i, animParams in ipairs(actionDef.animations) do
+		local animDef = mod.actionAnimationDefs[animParams.type]
+		if animDef.tick then
+			animDef.tick(mobj, action.animations[i], animParams)
+		end
+	end
 end
 
 ---@param player player_t
 function mod.stopPlayerActionAnimation(player)
-	local actionDef = mod.getActionDefFromPlayer(player)
-	if not (actionDef and actionDef.animation) then return end
-
-	local animDef = mod.actionAnimationDefs[actionDef.animation]
 	local action = player.itemapi_action
-	animDef.stop(action.target, action)
+	local actionDef = mod.getActionDefFromPlayer(player)
+	if not actionDef then return end
+
+	local mobj
+	if action.type == "carried_item" then
+		mobj = player.itemapi_carrySlots["right_hand"].mobj
+	else
+		mobj = action.target
+	end
+
+	for i, animParams in ipairs(actionDef.animations) do
+		local animDef = mod.actionAnimationDefs[animParams.type]
+		if animDef.stop then
+			animDef.stop(mobj, action.animations[i], animParams)
+		end
+	end
 end

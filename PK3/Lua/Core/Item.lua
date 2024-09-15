@@ -20,16 +20,19 @@ local mod = itemapi
 ---@field storable?  boolean
 ---
 ---@field actions  itemapi.ItemActionDef[]
+---@field action?  itemapi.ItemActionDef
 ---@field action1? itemapi.ItemActionDef
 ---@field action2? itemapi.ItemActionDef
 ---@field action3? itemapi.ItemActionDef
 ---
 ---@field groundActions  itemapi.GroundItemActionDef[]
+---@field groundAction?  itemapi.GroundItemActionDef
 ---@field groundAction1? itemapi.GroundItemActionDef
 ---@field groundAction2? itemapi.GroundItemActionDef
 ---@field groundAction3? itemapi.GroundItemActionDef
 ---
 ---@field groundTickers  table[]
+---@field groundTicker?  table
 ---@field groundTicker1? table
 ---@field groundTicker2? table
 ---@field groundTicker3? table
@@ -64,19 +67,74 @@ mod.mobjToItemType = {}
 
 
 -- elem1, elem2, elem3, ... => elems { 1, 2, 3 }
-local function parseSugarArray(def, arrayName, sugarPrefix)
+function mod.parseSugarArray(def, arrayName, sugarPrefix, optional)
 	if def[arrayName] then return end
 
 	local array = {}
 
-	local i = 1
-	while def[sugarPrefix .. i] do
-		table.insert(array, def[sugarPrefix .. i])
-		def[sugarPrefix .. i] = nil
-		i = i + 1
+	if def[sugarPrefix] then
+		table.insert(array, def[sugarPrefix])
+		def[sugarPrefix] = nil
+	else
+		local i = 1
+		while def[sugarPrefix .. i] do
+			table.insert(array, def[sugarPrefix .. i])
+			def[sugarPrefix .. i] = nil
+			i = i + 1
+		end
 	end
 
-	def[arrayName] = array
+	if not optional or #array ~= 0 then
+		def[arrayName] = array
+	end
+end
+
+---@param actionDefs itemapi.ActionDef[]
+local function parseActionDefs(actionDefs)
+	for _, actionDef in ipairs(actionDefs or {}) do
+		mod.parseSugarArray(actionDef, "animations", "animation")
+
+		for i, anim in ipairs(actionDef.animations) do
+			if type(anim) == "string" then
+				actionDef.animations[i] = { type = anim }
+			end
+		end
+	end
+end
+
+---@param def itemapi.ItemDef
+---@param optional? boolean
+local function parseDef(def, optional)
+	mod.parseSugarArray(def, "actions", "action", optional)
+	mod.parseSugarArray(def, "groundActions", "groundAction", optional)
+	mod.parseSugarArray(def, "groundTickers", "groundTicker", optional)
+
+	if def.actions then
+		parseActionDefs(def.actions)
+	end
+	if def.groundActions then
+		parseActionDefs(def.groundActions)
+	end
+end
+
+---@param def itemapi.ItemDef
+---@return itemapi.ItemDef
+local function applyTemplate(def)
+	local templateDef = mod.itemDefTemplates[def.template]
+
+	if templateDef.old then
+		def = mod.merge(templateDef, def)
+
+		if templateDef.onTemplate then
+			templateDef.onTemplate(def)
+		end
+
+		return def
+	else
+		templateDef = templateDef.template(def)
+		parseDef(templateDef)
+		return mod.merge(templateDef, def)
+	end
 end
 
 ---Registers a new item type
@@ -87,14 +145,10 @@ function mod.addItem(id, def)
 		error("missing or invalid item ID", 2)
 	end
 
+	parseDef(def, true)
+
 	if def.template then
-		local templateDef = mod.itemDefTemplates[def.template]
-
-		def = mod.merge(templateDef, def)
-
-		if templateDef.onTemplate then
-			templateDef.onTemplate(def)
-		end
+		def = applyTemplate(def)
 	end
 
 	def.index = #mod.itemDefs + 1
@@ -102,9 +156,7 @@ function mod.addItem(id, def)
 	mod.itemDefs[def.index] = def
 	mod.itemDefs[id] = def
 
-	parseSugarArray(def, "actions", "action")
-	parseSugarArray(def, "groundActions", "groundAction")
-	parseSugarArray(def, "groundTickers", "groundTicker")
+	parseDef(def)
 
 	def.stackable = $ or 1
 
@@ -133,10 +185,14 @@ end
 
 ---Registers a new item template
 ---@param id string
----@param def itemapi.ItemDef
+---@param def itemapi.ItemDef|fun(def: itemapi.ItemDef): itemapi.ItemDef
 function mod.addItemTemplate(id, def)
 	if type(id) ~= "string" then
 		error("missing or invalid item template ID", 2)
+	end
+
+	if type(def) == "function" then
+		def = { template = def }
 	end
 
 	def.id = id
