@@ -13,7 +13,7 @@ mobjinfo[MT_ITEMAPI_CARRIEDITEM] = {
 	flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_SCENERY|MF_NOGRAVITY
 }
 
-states[S_ITEMAPI_CARRIEDITEM] = { SPR_UNKN, A }
+states[S_ITEMAPI_CARRIEDITEM] = { SPR_UNKN, 0 }
 
 
 -- ...I assume Sonic & co are right handed lol?
