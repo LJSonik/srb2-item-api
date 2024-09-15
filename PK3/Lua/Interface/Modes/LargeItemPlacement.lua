@@ -61,7 +61,7 @@ mod.addUIMode("large_item_placement", {
 		local mo = P_SpawnMobj(x, y, z, MT_ITEMAPI_ITEMPLACEMENTINDICATOR)
 		cl.uiMode.indicatorMobj = mo
 
-		mo.sprite, mo.frame = SPR_IAPI, A
+		mo.sprite, mo.frame = SPR_IAPI, 0
 		mo.angle = consoleplayer.mo.angle
 		mo.spriteyoffset = -4*FU -- Hack to work around OpenGL rendering with an extra 4 FU y-offset
 		mo.renderflags = $ | RF_FLOORSPRITE | RF_NOSPLATBILLBOARD
