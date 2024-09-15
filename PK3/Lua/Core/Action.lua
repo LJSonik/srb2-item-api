@@ -268,6 +268,8 @@ function mod.performCarriedItemAction(player, index, groundItem)
 			groundItem = groundItem,
 			progress = 0
 		}
+
+		mod.startPlayerActionAnimation(player)
 	else
 		actionDef.action(player, groundItem)
 	end
@@ -352,6 +354,8 @@ function mod.updateAction(player)
 	if action.type == "carried_item" then
 		local itemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 		local actionDef = itemDef.actions[action.index]
+
+		mod.updatePlayerActionAnimation(player)
 
 		if action.progress >= actionDef.duration then
 			actionDef.action(player, action.groundItem)
