@@ -102,7 +102,7 @@ function mod.addMobjAction(mobjType, def)
 
 	for i, anim in ipairs(def.animations) do
 		if type(anim) == "string" then
-			def.animations[i] = mod.actionAnimationDefs[anim]
+			def.animations[i] = { type = anim }
 		end
 	end
 
