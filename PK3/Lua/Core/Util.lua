@@ -142,3 +142,56 @@ function mod.rotatePointAroundPivot(x, y, px, py, rotation)
 		px + FixedMul(cos(shiftedAngle), dist),
 		py + FixedMul(sin(shiftedAngle), dist)
 end
+
+---@param s string
+---@return spritenum_t
+---@return number
+function mod.parseSpriteFramePair(s)
+	local spritePart, framePart = s:find("(.*):(.*)")
+
+	local sprite = _G["SPR_" .. spritePart]
+
+	local frame
+	if tonumber(frame) ~= nil then
+		frame = tonumber(framePart)
+	else
+		frame = R_Char2Frame(framePart)
+	end
+
+	return sprite, frame
+end
+
+---@param s string
+---@return { [1]: spritenum_t, [2]: number }[]
+function mod.parseSpriteFramePairs(s)
+	local _, _, spritePart, framePart = s:find("(.*):(.*)")
+
+	local sprite = _G["SPR_" .. spritePart]
+
+	local _, _, firstFramePart, lastFramePart = framePart:find("(.*)-(.*)")
+
+	if not firstFramePart then
+		firstFramePart, lastFramePart = framePart, framePart
+	end
+
+	local firstFrame
+	if tonumber(firstFramePart) ~= nil then
+		firstFrame = tonumber(firstFramePart)
+	else
+		firstFrame = R_Char2Frame(firstFramePart)
+	end
+
+	local lastFrame
+	if tonumber(lastFramePart) ~= nil then
+		lastFrame = tonumber(lastFramePart)
+	else
+		lastFrame = R_Char2Frame(lastFramePart)
+	end
+
+	local sprites = {}
+	for frame = firstFrame, lastFrame do
+		table.insert(sprites, { sprite, frame })
+	end
+
+	return sprites
+end
