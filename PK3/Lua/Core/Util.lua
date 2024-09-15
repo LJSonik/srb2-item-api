@@ -96,6 +96,12 @@ function mod.randomFixed(a, b)
 	return P_RandomRange(a / 256, b / 256) * 256
 end
 
+---@param t any[]
+---@return any
+function mod.randomElement(t)
+	return t[P_RandomRange(1, #t)]
+end
+
 ---@param x fixed_t
 ---@param y fixed_t
 ---@param radius fixed_t
