@@ -1,3 +1,7 @@
+---@class itemapi
+local mod = itemapi
+
+
 freeslot("MT_ITEMAPI_PARTICLE", "S_ITEMAPI_PARTICLE")
 
 mobjinfo[MT_ITEMAPI_PARTICLE] = {
@@ -9,3 +13,9 @@ mobjinfo[MT_ITEMAPI_PARTICLE] = {
 }
 
 states[S_ITEMAPI_PARTICLE] = { SPR_NULL, 0 }
+
+
+---@return mobj_t[]
+function mod.spawnParticlePool()
+	return {}
+end
