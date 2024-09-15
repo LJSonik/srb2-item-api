@@ -1,7 +1,7 @@
 Important
 =========
 - Fix item stored when inventory full
-- Take carried again item when using action
+- Take carried item again when using action
 - Fix item stacking in containers
 - Remove all instances of the chatactive hack
 - Fix P_Random called in visual tickers
@@ -9,18 +9,16 @@ Important
 
 Essential features
 ==================
-- Options
 - Hunger
 - Thirst
 - Status icons
 - Icons when obtaining items
 - Day/night cycle
+- Options
 - Help menu
-- Plant growth
 
 Normal
 ======
-- Player action animations?
 - ItemDef.carriedModelScale?
 - Item piles?
 - ItemDef.onPlace event?
@@ -44,8 +42,8 @@ Fixes
 - Cancel action if conditions are no longer met (distance, target, carried item, ...)
 - Fix code still using ActionSelection.targetType
 - Store local mobj tickers in a separate list
-- Fix mobj tickers running three times on spawn due to pre-ticker
-- Mobj tickers limited to TICRATE frequencies
+- Fix mobj tickers running three times on spawn due to pre-ticker?
+- Fix mobj tickers limited to TICRATE frequencies
 - Unload tickers on map change
 - Fix item placement on slopes? (square hitboxes)
 - Ensure net command order?
@@ -54,10 +52,8 @@ Fixes
 
 Optimisations
 =============
+- Particle culling
+- Visual ticker culling
 - Add a load balancer for mobj tickers?
-- Culling
-	- Models
-	- Particle pools
-	- Mobjs?
 - Avoid validity check for mobj tickers?
 - Optimise action filtering in mod.canPlayerUseActionsOnMobj?
