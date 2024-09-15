@@ -5,9 +5,9 @@ local mod = itemapi
 ---@class itemapi.ActionAnimationDef
 ---@field id    string
 ---@field index integer
----@field start fun(mobj: mobj_t, state: table, params: table)
----@field tick  fun(mobj: mobj_t, state: table, params: table)
----@field stop  fun(mobj: mobj_t, state: table, params: table)
+---@field start fun(mobj: mobj_t, state: table, params: table, player: player_t)
+---@field tick  fun(mobj: mobj_t, state: table, params: table, player: player_t)
+---@field stop  fun(mobj: mobj_t, state: table, params: table, player: player_t)
 
 
 ---@type { [string|integer]: itemapi.ActionAnimationDef }
@@ -48,7 +48,7 @@ function mod.startPlayerActionAnimation(player)
 
 		local animDef = mod.actionAnimationDefs[animParams.type]
 		if animDef.start then
-			animDef.start(mobj, anim, animParams)
+			animDef.start(mobj, anim, animParams, player)
 		end
 	end
 end
@@ -68,7 +68,7 @@ function mod.updatePlayerActionAnimation(player)
 	for i, animParams in ipairs(actionDef.animations) do
 		local animDef = mod.actionAnimationDefs[animParams.type]
 		if animDef.tick then
-			animDef.tick(mobj, action.animations[i], animParams)
+			animDef.tick(mobj, action.animations[i], animParams, player)
 		end
 	end
 end
@@ -89,7 +89,7 @@ function mod.stopPlayerActionAnimation(player)
 	for i, animParams in ipairs(actionDef.animations) do
 		local animDef = mod.actionAnimationDefs[animParams.type]
 		if animDef.stop then
-			animDef.stop(mobj, action.animations[i], animParams)
+			animDef.stop(mobj, action.animations[i], animParams, player)
 		end
 	end
 end
