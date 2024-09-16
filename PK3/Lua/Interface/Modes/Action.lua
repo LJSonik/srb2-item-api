@@ -114,6 +114,17 @@ function mod.getActionDefFromMobj(mobj, actionIndex)
 	end
 end
 
+---@return boolean
+local function checkSelectionValidity()
+	local mobj = mod.client.actionSelection.mobj
+	if mobj and not mobj.valid then
+		mod.closeUI()
+		return false
+	end
+
+	return true
+end
+
 function mod.openActionSelection()
 	local cl = mod.client
 
@@ -237,10 +248,7 @@ mod.addUIMode("action_selection", {
 	end,
 
 	update = function()
-		local mobj = mod.client.actionSelection.mobj
-		if mobj and not mobj.valid then
-			mod.closeUI()
-		end
+		if not checkSelectionValidity() then return end
 	end,
 
 	leave = function()
@@ -256,6 +264,8 @@ mod.addUIMode("action_selection", {
 			defaultKey = "@custom1",
 
 			action = function()
+				if not checkSelectionValidity() then return end
+
 				local sel = mod.client.actionSelection
 
 				local availableAction = sel.availableActions[1]
@@ -281,6 +291,8 @@ mod.addUIMode("action_selection", {
 			defaultKey = "@forward",
 
 			action = function()
+				if not checkSelectionValidity() then return end
+
 				if mod.getMainCarriedItemType(consoleplayer) then
 					mod.sendNetCommand_storeCarriedItem()
 				elseif mod.client.actionSelection.mobj then
@@ -297,6 +309,8 @@ mod.addUIMode("action_selection", {
 			defaultKey = "@backward",
 
 			action = function()
+				if not checkSelectionValidity() then return end
+
 				if mod.getMainCarriedItemType(consoleplayer) then
 					mod.sendNetCommand_placeCarriedItem()
 				end
