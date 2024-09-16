@@ -1,3 +1,7 @@
+---@class itemapi
+local mod = itemapi
+
+
 ---@class ljgui
 local gui = ljrequire "ljgui.common"
 
