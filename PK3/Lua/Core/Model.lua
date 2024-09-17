@@ -326,6 +326,8 @@ function mod.despawnClientModel(index)
 end
 
 function mod.initialiseClientModels()
+	mod.client.models = {}
+
 	local models = mod.vars.models
 	for i = 1, #models do
 		mod.addModelToCullingSystem(models[i])

@@ -204,7 +204,7 @@ addHook("GameQuit", function()
 end)
 
 addHook("NetVars", function()
-	if mod.client.initialised then
+	if not isserver and mod.client.initialised then
 		mod.uninitialiseClient()
 	end
 end)
