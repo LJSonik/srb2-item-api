@@ -122,19 +122,9 @@ end
 local function applyTemplate(def)
 	local templateDef = mod.itemDefTemplates[def.template]
 
-	if templateDef.old then
-		def = mod.merge(templateDef, def)
-
-		if templateDef.onTemplate then
-			templateDef.onTemplate(def)
-		end
-
-		return def
-	else
-		templateDef = templateDef.template(def)
-		parseDef(templateDef)
-		return mod.merge(templateDef, def)
-	end
+	templateDef = templateDef.template(def)
+	parseDef(templateDef)
+	return mod.merge(templateDef, def)
 end
 
 ---Registers a new item type
