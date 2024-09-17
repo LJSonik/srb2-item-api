@@ -67,7 +67,7 @@ mod.mobjToItemType = {}
 
 
 -- elem1, elem2, elem3, ... => elems { 1, 2, 3 }
-function mod.parseSugarArray(def, arrayName, sugarPrefix, optional)
+function mod.parseSugarArray(def, arrayName, sugarPrefix)
 	if def[arrayName] then return end
 
 	local array = {}
@@ -84,7 +84,7 @@ function mod.parseSugarArray(def, arrayName, sugarPrefix, optional)
 		end
 	end
 
-	if not optional or #array ~= 0 then
+	if #array ~= 0 then
 		def[arrayName] = array
 	end
 end
@@ -93,6 +93,7 @@ end
 local function parseActionDefs(actionDefs)
 	for _, actionDef in ipairs(actionDefs or {}) do
 		mod.parseSugarArray(actionDef, "animations", "animation")
+		actionDef.animations = $ or {}
 
 		for i, anim in ipairs(actionDef.animations) do
 			if type(anim) == "string" then
@@ -103,11 +104,10 @@ local function parseActionDefs(actionDefs)
 end
 
 ---@param def itemapi.ItemDef
----@param optional? boolean
-local function parseDef(def, optional)
-	mod.parseSugarArray(def, "actions", "action", optional)
-	mod.parseSugarArray(def, "groundActions", "groundAction", optional)
-	mod.parseSugarArray(def, "groundTickers", "groundTicker", optional)
+local function parseDef(def)
+	mod.parseSugarArray(def, "actions", "action")
+	mod.parseSugarArray(def, "groundActions", "groundAction")
+	mod.parseSugarArray(def, "groundTickers", "groundTicker")
 
 	if def.actions then
 		parseActionDefs(def.actions)
@@ -118,12 +118,20 @@ local function parseDef(def, optional)
 end
 
 ---@param def itemapi.ItemDef
+local function setMissingDefFields(def)
+	def.actions = $ or {}
+	def.groundActions = $ or {}
+	def.groundTickers = $ or {}
+end
+
+---@param def itemapi.ItemDef
 ---@return itemapi.ItemDef
 local function applyTemplate(def)
 	local templateDef = mod.itemDefTemplates[def.template]
 
 	templateDef = templateDef.template(def)
 	parseDef(templateDef)
+	setMissingDefFields(templateDef)
 	return mod.merge(templateDef, def)
 end
 
@@ -135,7 +143,7 @@ function mod.addItem(id, def)
 		error("missing or invalid item ID", 2)
 	end
 
-	parseDef(def, true)
+	parseDef(def)
 
 	if def.template then
 		def = applyTemplate(def)
@@ -147,6 +155,7 @@ function mod.addItem(id, def)
 	mod.itemDefs[id] = def
 
 	parseDef(def)
+	setMissingDefFields(def)
 
 	def.stackable = $ or 1
 
