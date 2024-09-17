@@ -78,14 +78,8 @@ local netCommand_placeCarriedItem = nc.add(function(p)
 	local slot = p.itemapi_carrySlots["right_hand"]
 	if not slot then return end
 
-	local itemType = slot.itemType
-	local multiple = slot.multiple
-
-	if not mod.placeCarriedItem(p) then return end
-
-	if multiple and p.itemapi_inventory:remove(itemType) then
-		mod.carryItem(p, itemType)
-		p.itemapi_carrySlots["right_hand"].multiple = true
+	if mod.placeItem(p, slot.itemType) then
+		mod.smartUncarryItem(p)
 	end
 end)
 

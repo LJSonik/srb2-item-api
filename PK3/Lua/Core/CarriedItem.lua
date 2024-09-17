@@ -173,3 +173,22 @@ function mod.uncarryItem(player, slotID)
 	player.itemapi_carrySlots[slotDef.index] = nil
 	player.itemapi_carrySlots[slotDef.id] = nil
 end
+
+---@param player player_t
+---@param slotID? string|integer
+function mod.smartUncarryItem(player, slotID)
+	slotID = $ or "right_hand"
+
+	local slot = player.itemapi_carrySlots[slotID]
+	if not slot then return end
+
+	local itemType = slot.itemType
+	local multiple = slot.multiple
+
+	mod.uncarryItem(player, slotID)
+
+	if multiple and player.itemapi_inventory:remove(itemType) then
+		mod.carryItem(player, itemType)
+		player.itemapi_carrySlots[slotID].multiple = true
+	end
+end
