@@ -131,7 +131,6 @@ local function applyTemplate(def)
 
 	templateDef = templateDef.template(def)
 	parseDef(templateDef)
-	setMissingDefFields(templateDef)
 	return mod.merge(templateDef, def)
 end
 
@@ -154,7 +153,6 @@ function mod.addItem(id, def)
 	mod.itemDefs[def.index] = def
 	mod.itemDefs[id] = def
 
-	parseDef(def)
 	setMissingDefFields(def)
 
 	def.stackable = $ or 1
