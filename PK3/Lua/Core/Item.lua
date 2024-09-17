@@ -184,7 +184,7 @@ end
 
 ---Registers a new item template
 ---@param id string
----@param def itemapi.ItemDef|fun(def: itemapi.ItemDef): itemapi.ItemDef
+---@param def table|fun(def: itemapi.ItemDef): itemapi.ItemDef
 function mod.addItemTemplate(id, def)
 	if type(id) ~= "string" then
 		error("missing or invalid item template ID", 2)
