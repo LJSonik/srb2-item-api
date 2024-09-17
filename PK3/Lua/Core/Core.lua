@@ -97,6 +97,8 @@ function mod.uninitialiseClient()
 		mod.uninitialiseClientMap()
 	end
 
+	mod.uninitialiseInterface()
+
 	mod.client.initialised = false
 end
 
