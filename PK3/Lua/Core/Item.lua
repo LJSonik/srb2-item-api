@@ -128,10 +128,12 @@ end
 ---@return itemapi.ItemDef
 local function applyTemplate(def)
 	local templateDef = mod.itemDefTemplates[def.template]
+	def.template = nil
 
-	templateDef = templateDef.template(def)
-	parseDef(templateDef)
-	return mod.merge(templateDef, def)
+	local baseDef = templateDef.template(def)
+	parseDef(baseDef)
+
+	return mod.merge(baseDef, def)
 end
 
 ---Registers a new item type
@@ -144,7 +146,7 @@ function mod.addItem(id, def)
 
 	parseDef(def)
 
-	if def.template then
+	while def.template do
 		def = applyTemplate(def)
 	end
 
