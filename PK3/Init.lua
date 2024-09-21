@@ -3,6 +3,11 @@ local mod = {}
 rawset(_G, "itemapi", mod)
 
 
+---@class itemapi.Module
+---@field vars table
+---@field client table
+
+
 ---@class itemapi.Vars
 mod.vars = {}
 
@@ -13,6 +18,21 @@ mod.client = {}
 addHook("NetVars", function(net)
 	mod.vars = net($)
 end)
+
+
+---@return itemapi.Module
+function mod.addModule()
+	local module = {
+		vars = {},
+		client = {}
+	}
+
+	addHook("NetVars", function(net)
+		module.vars = net($)
+	end)
+
+	return module
+end
 
 
 dofile "Libraries/ljrequire.lua"
