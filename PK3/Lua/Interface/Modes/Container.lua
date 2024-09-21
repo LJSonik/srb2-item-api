@@ -7,7 +7,7 @@ local gui = ljrequire "ljgui"
 
 ---@param player player_t
 ---@param inventory itemapi.Inventory
-function itemapi.openContainer(player, inventory)
+function mod.openContainer(player, inventory)
 	if player == consoleplayer then
 		mod.setUIMode("container", inventory)
 	end
