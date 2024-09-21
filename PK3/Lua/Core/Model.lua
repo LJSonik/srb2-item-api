@@ -116,7 +116,6 @@ function mod.spawnModel(x, y, z, id)
 
 	table.insert(mod.vars.models, model)
 	mod.setModelTransform(model, x, y, z, 0, FU)
-	mod.addModelToCullingSystem(model)
 
 	return model
 end
@@ -290,9 +289,16 @@ function mod.setModelTransform(model, x, y, z, rotation, scale)
 
 	if model.parts then
 		applyTransform(model, model.parts)
-	elseif mod.client.models[model.index] then
-		applyTransform(model, mod.client.models[model.index])
-		mod.moveModelInCullingSystem(model, oldX, oldY, x, y)
+	else
+		if mod.client.models[model.index] then
+			applyTransform(model, mod.client.models[model.index])
+		end
+
+		if oldX ~= nil then
+			mod.moveModelInCullingSystem(model, oldX, oldY, x, y)
+		else
+			mod.addModelToCullingSystem(model)
+		end
 	end
 end
 
