@@ -79,6 +79,14 @@ function mod.removeValueFromArray(array, element)
 	end
 end
 
+---@param t fixed_t
+---@param min number
+---@param max number
+---@return number
+function mod.easeLinear(t, min, max)
+	return min + FixedMul(t, max - min)
+end
+
 ---@param time tic_t
 ---@param low number
 ---@param high number
