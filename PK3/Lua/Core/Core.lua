@@ -190,6 +190,13 @@ addHook("PlayerSpawn", function(p)
 	-- p.mo.angle = ANGLE_180
 end)
 
+---@param p player_t
+addHook("PlayerQuit", function(p)
+	for i = 1, #mod.carrySlotDefs do
+		mod.uncarryItem(p, i)
+	end
+end)
+
 addHook("MapChange", function()
 	if mod.vars.mapInitialised then
 		mod.uninitialiseMap()
