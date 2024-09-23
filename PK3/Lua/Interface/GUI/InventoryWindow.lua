@@ -61,6 +61,16 @@ local netCommand_moveInventoryItemBetweenPlayerAndContainer = nc.add(function(p,
 end)
 
 
+function mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(srcIsContainer, srcSlotIndex, dstIsContainer, dstSlotIndex)
+	local stream = nc.prepare(netCommand_moveInventoryItemBetweenPlayerAndContainer)
+	bs.writeBit(stream, srcIsContainer and 1 or 0)
+	bs.writeByte(stream, srcSlotIndex)
+	bs.writeBit(stream, dstIsContainer and 1 or 0)
+	bs.writeByte(stream, dstSlotIndex)
+	mod.sendNetCommand(consoleplayer, stream)
+end
+
+
 ---@class itemapi.InventoryWindow : ljgui.Window
 local Inventory, base = gui.class(gui.Window)
 mod.InventoryWindow = Inventory
@@ -125,6 +135,18 @@ function Inventory:onKeyPress(key)
 	return false
 end
 
+---@param inventory itemapi.Inventory
+---@return integer?
+local function findFreeInventorySlot(inventory)
+	for slotIndex = 1, inventory.numSlots do
+		if not inventory:isSlotUsed(slotIndex) then
+			return slotIndex
+		end
+	end
+
+	return nil
+end
+
 ---@param slot ljgui.Item
 ---@return boolean
 function Inventory.slot_onLeftMousePress(slot)
@@ -132,12 +154,10 @@ function Inventory.slot_onLeftMousePress(slot)
 	local draggedItem = mod.client.draggedInventoryItem
 
 	if draggedItem then
-		local stream = nc.prepare(netCommand_moveInventoryItemBetweenPlayerAndContainer)
-		bs.writeBit(stream, draggedItem.window.isContainer and 1 or 0)
-		bs.writeByte(stream, draggedItem.slotIndex)
-		bs.writeBit(stream, window.isContainer and 1 or 0)
-		bs.writeByte(stream, slot.slotIndex)
-		mod.sendNetCommand(consoleplayer, stream)
+		mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
+			draggedItem.window.isContainer, draggedItem.slotIndex,
+			window.isContainer, slot.slotIndex
+		)
 
 		if window.inventory:isSlotUsed(slot.slotIndex)
 		and (window ~= draggedItem.window or slot.slotIndex ~= draggedItem.slotIndex) then
@@ -149,10 +169,32 @@ function Inventory.slot_onLeftMousePress(slot)
 			mod.client.draggedInventoryItem = nil
 		end
 	elseif window.inventory:isSlotUsed(slot.slotIndex) then
-		mod.client.draggedInventoryItem = {
-			window = window,
-			slotIndex = slot.slotIndex
-		}
+		if mod.client.shiftHeld then
+			local root = gui.root
+			local dstWindow = window.isContainer and root.inventoryWindow or root.containerInventoryWindow
+
+			if dstWindow then
+				local dstSlotIndex = findFreeInventorySlot(dstWindow.inventory)
+
+				if dstSlotIndex then
+					mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
+						window.isContainer, slot.slotIndex,
+						not window.isContainer, dstSlotIndex
+					)
+				end
+			else
+				local stream = nc.prepare(netCommand_carryInventoryItem)
+				bs.writeByte(stream, slot.slotIndex)
+				mod.sendNetCommand(consoleplayer, stream)
+
+				mod.closeUI()
+			end
+		else
+			mod.client.draggedInventoryItem = {
+				window = window,
+				slotIndex = slot.slotIndex
+			}
+		end
 	end
 
 	return true
@@ -306,6 +348,6 @@ mod.addMenu("inventory", {
 
 	destroy = function()
 		mod.client.draggedInventoryItem = nil
-		gui.root.statsWindow:detach()
+		gui.root.statsWindow = gui.root.statsWindow:detach()
 	end
 })
