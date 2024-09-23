@@ -60,12 +60,22 @@ function MenuList:onKeyPress(key)
 	return false
 end
 
+---@param element ljgui.Button
+local function onElementTrigger(element)
+	mod.selectMenu(element.menuID)
+	mod.focusMenu()
+end
+
 function MenuList:__init(props)
 	local children = {}
 	for _, def in ipairs(mod.menuDefs) do
 		table.insert(children, gui.Button {
+			var_menuID = def.id,
+
 			text = def.name,
-			width = 48*FU
+			width = 48*FU,
+
+			onTrigger = onElementTrigger,
 		})
 	end
 
