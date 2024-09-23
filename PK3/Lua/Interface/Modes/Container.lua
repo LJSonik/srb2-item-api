@@ -26,7 +26,6 @@ mod.addUIMode("container", {
 			isContainer = true
 		}
 
-		containerWindow:move(124*FU, 64*FU)
 		root.containerInventoryWindow = containerWindow:attach(root)
 		containerWindow:focus()
 
@@ -35,8 +34,11 @@ mod.addUIMode("container", {
 			inventory = consoleplayer.itemapi_inventory
 		}
 
-		playerWindow:move(124*FU, 128*FU)
 		root.inventoryWindow = playerWindow:attach(root)
+
+		local gap = 2*FU
+		containerWindow:move(124*FU, 100*FU - gap - containerWindow.height)
+		playerWindow:move(124*FU, 100*FU + gap)
 
 		mod.disableGameKeys()
 	end,

@@ -8,7 +8,6 @@ local bs = ljrequire "bytestream"
 
 
 local SLOT_SIZE = 16*FU
-local NUM_SLOTS_X, NUM_SLOTS_Y = 4, 2
 local CLICK_DURATION = TICRATE*3/8
 
 
@@ -91,7 +90,7 @@ function Inventory:onKeyPress(key)
 	elseif not key.repeated and keyName == "enter"
 	or mod.isKeyBoundToUICommand(keyName, "confirm")
 	or mod.isKeyBoundToUICommand(keyName, "open_action_selection") then
-		local slotIndex = (self.selectedSlotY - 1) * NUM_SLOTS_X + self.selectedSlotX
+		local slotIndex = (self.selectedSlotY - 1) * self.inventory.numColumns + self.selectedSlotX
 
 		local stream = nc.prepare(netCommand_carryInventoryItem)
 		bs.writeByte(stream, slotIndex)
@@ -104,13 +103,13 @@ function Inventory:onKeyPress(key)
 		if self.selectedSlotX > 1 then
 			self.selectedSlotX = $ - 1
 		else
-			self.selectedSlotX = NUM_SLOTS_X
+			self.selectedSlotX = self.inventory.numColumns
 		end
 
 		return true
 	elseif keyName == "right arrow"
 	or mod.isKeyBoundToGameControl(keyName, GC_STRAFERIGHT) then
-		if self.selectedSlotX < NUM_SLOTS_X then
+		if self.selectedSlotX < self.inventory.numColumns then
 			self.selectedSlotX = $ + 1
 		else
 			self.selectedSlotX = 1
@@ -122,13 +121,13 @@ function Inventory:onKeyPress(key)
 		if self.selectedSlotY > 1 then
 			self.selectedSlotY = $ - 1
 		else
-			self.selectedSlotY = NUM_SLOTS_Y
+			self.selectedSlotY = self.numRows
 		end
 
 		return true
 	elseif keyName == "down arrow"
 	or mod.isKeyBoundToGameControl(keyName, GC_BACKWARD) then
-		if self.selectedSlotY < NUM_SLOTS_Y then
+		if self.selectedSlotY < self.numRows then
 			self.selectedSlotY = $ + 1
 		else
 			self.selectedSlotY = 1
@@ -205,9 +204,10 @@ end
 ---@return boolean
 function Inventory.slot_onMouseMove(slot, mouse)
 	local window = slot.parent.parent
+	local numColumns = window.inventory.numColumns
 
-	window.selectedSlotX = (slot.slotIndex - 1) % NUM_SLOTS_X + 1
-	window.selectedSlotY =  (slot.slotIndex - 1) / NUM_SLOTS_X + 1
+	window.selectedSlotX = (slot.slotIndex - 1) % numColumns + 1
+	window.selectedSlotY =  (slot.slotIndex - 1) / numColumns + 1
 
 	if slot.pressTime ~= nil then
 		mod.client.draggedInventoryItem = {
@@ -270,7 +270,7 @@ end
 ---@param v videolib
 local function drawSlot(item, v)
 	local window = item.parent.parent
-	local selectedIndex = (window.selectedSlotY - 1) * NUM_SLOTS_X + window.selectedSlotX
+	local selectedIndex = (window.selectedSlotY - 1) * window.inventory.numColumns + window.selectedSlotX
 	local selected = (selectedIndex == item.slotIndex)
 	local l, t = item.cachedLeft, item.cachedTop
 	local w, h = item.width, item.height
@@ -290,8 +290,12 @@ local function drawSlot(item, v)
 end
 
 function Inventory:__init(props)
+	local inventory = props.inventory
+
+	self.numRows = (inventory.numSlots - 1) / inventory.numColumns + 1
+
 	local children = {}
-	for i = 1, NUM_SLOTS_X * NUM_SLOTS_Y do
+	for i = 1, inventory.numSlots do
 		local slot = gui.Rectangle {
 			size = { SLOT_SIZE, SLOT_SIZE },
 			style = { bgColor = 26 },
@@ -311,11 +315,11 @@ function Inventory:__init(props)
 	base.__init(self, {
 		var_selectedSlotX = 1,
 		var_selectedSlotY = 1,
-		var_inventory = props.inventory,
+		var_inventory = inventory,
 		var_isContainer = props.isContainer,
 
-		width = NUM_SLOTS_X * (SLOT_SIZE + FU) + 3*FU,
-		height = NUM_SLOTS_Y * (SLOT_SIZE + FU) + 11*FU,
+		width = inventory.numColumns * (SLOT_SIZE + FU) + 3*FU,
+		height = self.numRows * (SLOT_SIZE + FU) + 11*FU,
 
 		autoLayout = "Flow",
 		style = windowStyle,

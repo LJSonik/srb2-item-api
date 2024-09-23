@@ -75,7 +75,7 @@ end
 ---@param p player_t
 function mod.initialisePlayer(p)
 	p.itemapi_carrySlots = {}
-	p.itemapi_inventory = mod.Inventory()
+	p.itemapi_inventory = mod.Inventory(8, 4)
 	p.itemapi_hunger = mod.MAX_HUNGER
 
 	p.itemapi_initialised = true

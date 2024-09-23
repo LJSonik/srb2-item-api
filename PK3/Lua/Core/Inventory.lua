@@ -10,12 +10,17 @@ local ljclass = ljrequire "ljclass"
 
 
 ---@class itemapi.Inventory : ljclass.Class
+---@field numSlots   integer
+---@field numColumns integer
 local Inventory = ljclass.class()
 mod.Inventory = Inventory
 
 
-function Inventory:__init()
-	self.numSlots = 8
+---@param numSlots integer The number of slots
+---@param numColumns integer The number of columns
+function Inventory:__init(numSlots, numColumns)
+	self.numSlots = numSlots
+	self.numColumns = numColumns
 
 	self.types = {}
 	self.quantities = {}
