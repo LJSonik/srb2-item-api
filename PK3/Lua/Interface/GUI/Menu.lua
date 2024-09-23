@@ -155,7 +155,7 @@ function mod.handleMenuStandardKeyPress(key)
 			if mod.client.shiftHeld then
 				mod.selectPreviousMenu()
 			else
-			mod.selectNextMenu()
+				mod.selectNextMenu()
 			end
 			mod.focusMenu()
 		end
