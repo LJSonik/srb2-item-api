@@ -47,6 +47,8 @@ mod.addUIMode("container", {
 	-- end,
 
 	leave = function()
+		mod.client.draggedInventoryItem = nil
+
 		local root = gui.root
 		root.containerInventoryWindow = root.containerInventoryWindow:detach()
 		root.inventoryWindow = root.inventoryWindow:detach()
