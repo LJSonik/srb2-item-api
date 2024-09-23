@@ -217,7 +217,7 @@ end
 -- 	local mainArea = self.children:getFront()
 -- 	if mainArea.children:getLength() then
 -- 		for _, child in mainArea.children:reverseIterate() do
--- 			if gui.v.RandomChance(FU / 16) then
+-- 			if gui.v.RandomChance(FU/16) then
 -- 				fall(child)
 -- 			end
 -- 		end

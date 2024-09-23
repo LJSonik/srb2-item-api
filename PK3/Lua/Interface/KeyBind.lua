@@ -5,7 +5,7 @@ local mod = itemapi
 local gui = ljrequire "ljgui"
 
 
-local LONG_PRESS_DURATION = TICRATE / 4
+local LONG_PRESS_DURATION = TICRATE/4
 
 mod.gameControlToString = {
 	[GC_NULL] = "GC_NULL",
