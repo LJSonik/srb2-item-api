@@ -144,11 +144,11 @@ function mod.handleMenuStandardKeyPress(key)
 	if mod.isKeyBoundToUICommand(keyName, "open_menu") then
 		mod.closeUI()
 		return true
-	elseif keyName == "escape"
-	or mod.isKeyBoundToUICommand(keyName, "cancel") then
-		if mod.client.menuOpen then
-			mod.focusMenuList()
-		end
+	elseif mod.client.menuOpen and (
+		keyName == "escape"
+		or mod.isKeyBoundToUICommand(keyName, "cancel")
+	) then
+		mod.focusMenuList()
 		return true
 	elseif keyName == "tab" then
 		if mod.client.menuOpen then

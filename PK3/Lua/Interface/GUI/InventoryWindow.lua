@@ -9,6 +9,7 @@ local bs = ljrequire "bytestream"
 
 local SLOT_SIZE = 16*FU
 local NUM_SLOTS_X, NUM_SLOTS_Y = 4, 2
+local CLICK_DURATION = TICRATE*3/8
 
 
 ---@class itemapi.Client
@@ -83,6 +84,10 @@ function Inventory:onKeyPress(key)
 
 	if mod.handleMenuStandardKeyPress(key) then
 		return true
+	elseif keyName == "escape"
+	or mod.isKeyBoundToUICommand(keyName, "cancel") then
+		mod.closeUI()
+		return true
 	elseif not key.repeated and keyName == "enter"
 	or mod.isKeyBoundToUICommand(keyName, "confirm")
 	or mod.isKeyBoundToUICommand(keyName, "open_action_selection") then
@@ -153,6 +158,11 @@ function Inventory.slot_onLeftMousePress(slot)
 	local window = slot.parent.parent
 	local draggedItem = mod.client.draggedInventoryItem
 
+	if slot.pressTime ~= nil then
+		slot.pressTime = nil
+		slot:removeEvent("Tick", Inventory.slot_onTick)
+	end
+
 	if draggedItem then
 		mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
 			draggedItem.window.isContainer, draggedItem.slotIndex,
@@ -168,33 +178,23 @@ function Inventory.slot_onLeftMousePress(slot)
 		else
 			mod.client.draggedInventoryItem = nil
 		end
-	elseif window.inventory:isSlotUsed(slot.slotIndex) then
-		if mod.client.shiftHeld then
-			local root = gui.root
-			local dstWindow = window.isContainer and root.inventoryWindow or root.containerInventoryWindow
+	elseif mod.client.shiftHeld and window.inventory:isSlotUsed(slot.slotIndex) then
+		local root = gui.root
+		local dstWindow = window.isContainer and root.inventoryWindow or root.containerInventoryWindow
 
-			if dstWindow then
-				local dstSlotIndex = findFreeInventorySlot(dstWindow.inventory)
+		if dstWindow then
+			local dstSlotIndex = findFreeInventorySlot(dstWindow.inventory)
 
-				if dstSlotIndex then
-					mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
-						window.isContainer, slot.slotIndex,
-						not window.isContainer, dstSlotIndex
-					)
-				end
-			else
-				local stream = nc.prepare(netCommand_carryInventoryItem)
-				bs.writeByte(stream, slot.slotIndex)
-				mod.sendNetCommand(consoleplayer, stream)
-
-				mod.closeUI()
+			if dstSlotIndex then
+				mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
+					window.isContainer, slot.slotIndex,
+					not window.isContainer, dstSlotIndex
+				)
 			end
-		else
-			mod.client.draggedInventoryItem = {
-				window = window,
-				slotIndex = slot.slotIndex
-			}
 		end
+	else
+		slot.pressTime = mod.client.time
+		slot:addEvent("Tick", Inventory.slot_onTick)
 	end
 
 	return true
@@ -209,7 +209,36 @@ function Inventory.slot_onMouseMove(slot, mouse)
 	window.selectedSlotX = (slot.slotIndex - 1) % NUM_SLOTS_X + 1
 	window.selectedSlotY =  (slot.slotIndex - 1) / NUM_SLOTS_X + 1
 
+	if slot.pressTime ~= nil then
+		mod.client.draggedInventoryItem = {
+			window = window,
+			slotIndex = slot.slotIndex
+		}
+
+		slot.pressTime = nil
+		slot:removeEvent("Tick", Inventory.slot_onTick)
+	end
+
 	return true
+end
+
+---@param slot ljgui.Item
+function Inventory.slot_onTick(slot)
+	if mod.client.time - slot.pressTime < CLICK_DURATION then return end
+
+	local window = slot.parent.parent
+
+	slot.pressTime = nil
+	slot:removeEvent("Tick", Inventory.slot_onTick)
+
+	if not mod.client.draggedInventoryItem
+	and window.inventory:isSlotUsed(slot.slotIndex) then
+		local stream = nc.prepare(netCommand_carryInventoryItem)
+		bs.writeByte(stream, slot.slotIndex)
+		mod.sendNetCommand(consoleplayer, stream)
+
+		mod.closeUI()
+	end
 end
 
 ---@param v videolib
@@ -270,7 +299,6 @@ function Inventory:__init(props)
 			topMargin = FU,
 
 			onLeftMousePress = self.slot_onLeftMousePress,
-			onLeftMouseRelease = self.slot_onLeftMouseRelease,
 			onMouseMove = self.slot_onMouseMove,
 		}
 
