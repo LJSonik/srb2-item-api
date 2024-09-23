@@ -62,6 +62,16 @@ function CraftingWindow:onKeyPress(key)
 	return false
 end
 
+---@param element ljgui.Button
+function CraftingWindow.element_onTrigger(element)
+	startCrafting(element.recipeType)
+end
+
+---@param element ljgui.Button
+function CraftingWindow.element_onMouseMove(element)
+	mod.setMenuNavigationSelection(element.parent.parent, element.recipeType)
+end
+
 ---@param oldElem ljgui.Item
 ---@param newElem ljgui.Item
 function CraftingWindow:onNavigationChange(oldElem, newElem)
@@ -80,9 +90,14 @@ function CraftingWindow:__init(props)
 		local itemDef = mod.itemDefs[recipe.item]
 
 		table.insert(children, gui.Button {
+			var_recipeType = recipe.index,
+
 			text = ("%s (%s)"):format(itemDef.name, recipe:toString()),
 			autoWidth = "FitParent",
 			margin = 2*FU,
+
+			onTrigger = CraftingWindow.element_onTrigger,
+			onMouseMove = CraftingWindow.element_onMouseMove
 		})
 	end
 

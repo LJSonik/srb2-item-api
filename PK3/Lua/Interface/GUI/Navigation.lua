@@ -40,8 +40,7 @@ local function onKeyPress(item, key)
 	end
 
 	if newIndex then
-		item.navigationIndex = newIndex
-		callNavigationEvent(item, oldIndex, newIndex)
+		mod.setMenuNavigationSelection(item, newIndex)
 		return true
 	else
 		return false
@@ -62,4 +61,12 @@ function mod.addMenuNavigationToItem(item, navigationTarget, onChange)
 		local newElem = navigationTarget.children:get(item.navigationIndex)
 		onChange(item, nil, newElem, nil, item.navigationIndex)
 	end
+end
+
+---@param item ljgui.Item
+---@param index integer
+function mod.setMenuNavigationSelection(item, index)
+	local oldIndex = item.navigationIndex
+	item.navigationIndex = index
+	callNavigationEvent(item, oldIndex, index)
 end
