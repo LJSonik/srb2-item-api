@@ -102,6 +102,16 @@ function mod.selectNextMenu()
 	end
 end
 
+function mod.selectPreviousMenu()
+	local menuList = gui.root.menuList
+
+	if menuList.selectedElementIndex > 1 then
+		mod.selectMenu(menuList.selectedElementIndex - 1)
+	else
+		mod.selectMenu(#mod.menuDefs)
+	end
+end
+
 function mod.focusMenu()
 	local menuDef = mod.menuDefs[mod.client.selectedMenuID]
 
@@ -142,7 +152,11 @@ function mod.handleMenuStandardKeyPress(key)
 		return true
 	elseif keyName == "tab" then
 		if mod.client.menuOpen then
+			if mod.client.shiftHeld then
+				mod.selectPreviousMenu()
+			else
 			mod.selectNextMenu()
+			end
 			mod.focusMenu()
 		end
 		return true

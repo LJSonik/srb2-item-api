@@ -96,6 +96,9 @@ mod.uiCommandDefs = {}
 ---@type { [string]: tic_t }
 mod.client.buttonPressTimes = {}
 
+---@type boolean
+mod.client.shiftHeld = false
+
 
 ---@param keyName string
 ---@param control integer
@@ -266,6 +269,10 @@ addHook("KeyDown", function(key)
 
 	local cl = mod.client
 
+	if key.name == "lshift" or key.name == "rshift" then
+		cl.shiftHeld = true
+	end
+
 	if gui.handleKeyDown(key) or cl.menuOpen then
 		return true
 	end
@@ -294,6 +301,10 @@ addHook("KeyUp", function(key)
 	if mod.chatactive then return end
 
 	local cl = mod.client
+
+	if key.name == "lshift" or key.name == "rshift" then
+		cl.shiftHeld = false
+	end
 
 	if gui.handleKeyUp(key) or cl.menuOpen then
 		return true
