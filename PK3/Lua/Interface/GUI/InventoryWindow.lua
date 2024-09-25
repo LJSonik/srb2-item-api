@@ -120,7 +120,7 @@ function Inventory:onKeyPress(key)
 		return true
 	elseif not key.repeated and keyName == "tab"
 	or mod.isKeyBoundToGameControl(keyName, GC_CUSTOM3) then
-			local root = gui.root
+		local root = gui.root
 		local otherWindow = self.isContainer and root.inventoryWindow or root.containerInventoryWindow
 
 		if otherWindow then
