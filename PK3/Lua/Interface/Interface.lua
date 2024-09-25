@@ -128,6 +128,10 @@ hud.add(function(v)
 
 	gui.update(v)
 	gui.draw(v)
+
+	if mod.client.tooltip then
+		mod.drawTooltip(v)
+	end
 end, "game")
 
 

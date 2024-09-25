@@ -76,6 +76,26 @@ local Inventory, base = gui.class(gui.Window)
 mod.InventoryWindow = Inventory
 
 
+function Inventory:updateKeyboardTooltip()
+	local slotIndex = (self.selectedSlotY - 1) * self.inventory.numColumns + self.selectedSlotX
+	local itemType = self.inventory:get(slotIndex)
+	if not itemType then
+		mod.client.tooltip = nil
+		return
+	end
+
+	local slot = self.mainArea.children:get(slotIndex)
+
+	mod.client.tooltip = {
+		type = "anywhere",
+		text = mod.itemDefs[itemType].name,
+
+		x = slot.cachedLeft + slot.width / 2,
+		y = slot.cachedTop + slot.height + FU,
+		anchorX = "center"
+	}
+end
+
 ---@param key keyevent_t
 ---@return boolean
 function Inventory:onKeyPress(key)
@@ -100,7 +120,7 @@ function Inventory:onKeyPress(key)
 		return true
 	elseif not key.repeated and keyName == "tab"
 	or mod.isKeyBoundToGameControl(keyName, GC_CUSTOM3) then
-		local root = gui.root
+			local root = gui.root
 		local otherWindow = self.isContainer and root.inventoryWindow or root.containerInventoryWindow
 
 		if otherWindow then
@@ -116,6 +136,8 @@ function Inventory:onKeyPress(key)
 			self.selectedSlotX = self.inventory.numColumns
 		end
 
+		self:updateKeyboardTooltip()
+
 		return true
 	elseif keyName == "right arrow"
 	or mod.isKeyBoundToGameControl(keyName, GC_STRAFERIGHT) then
@@ -124,6 +146,8 @@ function Inventory:onKeyPress(key)
 		else
 			self.selectedSlotX = 1
 		end
+
+		self:updateKeyboardTooltip()
 
 		return true
 	elseif keyName == "up arrow"
@@ -134,6 +158,8 @@ function Inventory:onKeyPress(key)
 			self.selectedSlotY = self.numRows
 		end
 
+		self:updateKeyboardTooltip()
+
 		return true
 	elseif keyName == "down arrow"
 	or mod.isKeyBoundToGameControl(keyName, GC_BACKWARD) then
@@ -142,6 +168,8 @@ function Inventory:onKeyPress(key)
 		else
 			self.selectedSlotY = 1
 		end
+
+		self:updateKeyboardTooltip()
 
 		return true
 	end
@@ -220,6 +248,14 @@ function Inventory.slot_onMouseMove(slot, mouse)
 	window.selectedSlotY =  (slot.slotIndex - 1) / numColumns + 1
 	window:focus()
 
+	local itemType = window.inventory:get(slot.slotIndex)
+	if itemType then
+		mod.client.tooltip = {
+			type = "mouse",
+			text = mod.itemDefs[itemType].name
+		}
+	end
+
 	if slot.pressTime ~= nil then
 		mod.client.draggedInventoryItem = {
 			window = window,
@@ -231,6 +267,12 @@ function Inventory.slot_onMouseMove(slot, mouse)
 	end
 
 	return true
+end
+
+---@param slot ljgui.Item
+---@param mouse ljgui.Mouse
+function Inventory.slot_onMouseLeave(slot, mouse)
+	mod.client.tooltip = nil
 end
 
 ---@param slot ljgui.Item
@@ -315,6 +357,7 @@ function Inventory:__init(props)
 
 			onLeftMousePress = self.slot_onLeftMousePress,
 			onMouseMove = self.slot_onMouseMove,
+			onMouseLeave = self.slot_onMouseLeave,
 		}
 
 		slot.slotIndex = i
@@ -391,6 +434,7 @@ mod.addMenu("inventory", {
 
 	destroy = function()
 		mod.client.draggedInventoryItem = nil
+		mod.client.tooltip = nil
 		gui.root.statsWindow = gui.root.statsWindow:detach()
 	end
 })
