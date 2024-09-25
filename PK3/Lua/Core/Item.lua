@@ -5,10 +5,11 @@ local mod = itemapi
 ---@alias itemapi.ItemType string|integer
 
 ---@class itemapi.ItemDef
----@field id        string
----@field index     integer
----@field name      string
----@field template? string
+---@field id           string
+---@field index        integer
+---@field name         string
+---@field description? string
+---@field template?    string
 ---
 ---@field stackable  integer
 ---@field iconScale  fixed_t
@@ -105,6 +106,10 @@ end
 
 ---@param def itemapi.ItemDef
 local function parseDef(def)
+	if def.description then
+		def.description = def.description:gsub("\t", ""):gsub("\n$", "")
+	end
+
 	mod.parseSugarArray(def, "actions", "action")
 	mod.parseSugarArray(def, "groundActions", "groundAction")
 	mod.parseSugarArray(def, "groundTickers", "groundTicker")

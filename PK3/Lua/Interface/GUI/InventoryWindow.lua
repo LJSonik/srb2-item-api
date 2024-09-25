@@ -93,6 +93,18 @@ function Inventory:getOtherWindow()
 	end
 end
 
+---@param itemType itemapi.ItemType
+local function getTooltipText(itemType)
+	local def = mod.itemDefs[itemType]
+
+	local text = def.name
+	if def.description then
+		text = text .. "\n\n\x86" .. def.description
+	end
+
+	return text
+end
+
 function Inventory:updateKeyboardTooltip()
 	mod.client.tooltip = nil
 
@@ -109,7 +121,7 @@ function Inventory:updateKeyboardTooltip()
 
 	mod.client.tooltip = {
 		type = "anywhere",
-		text = mod.itemDefs[itemType].name,
+		text = getTooltipText(itemType),
 
 		x = slot.cachedLeft + slot.width / 2,
 		y = slot.cachedTop + slot.height + FU,
@@ -341,7 +353,7 @@ function Inventory.slot_onMouseMove(slot, mouse)
 	and not (draggedItem and draggedItem.window == window and draggedItem.slotIndex == slot.slotIndex) then
 		cl.tooltip = {
 			type = "mouse",
-			text = mod.itemDefs[itemType].name
+			text = getTooltipText(itemType)
 		}
 	end
 
