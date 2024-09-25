@@ -46,7 +46,9 @@ local netCommand_moveInventoryItemBetweenPlayerAndContainer = nc.add(function(p,
 	local dstIndex = bs.readByte(stream)
 
 	local mo = p.itemapi_mobjActionTarget
-	if not (mo and mo.valid) then return end
+	if (srcIsContainer or dstIsContainer) and not (mo and mo.valid) then
+		return
+	end
 
 	---@type itemapi.Inventory
 	local srcInventory = srcIsContainer and mo.inventory or p.itemapi_inventory
