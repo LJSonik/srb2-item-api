@@ -76,6 +76,14 @@ local Inventory, base = gui.class(gui.Window)
 mod.InventoryWindow = Inventory
 
 
+function Inventory:getSelectedSlotIndex()
+	return (self.selectedSlotY - 1) * self.inventory.numColumns + self.selectedSlotX
+end
+
+function Inventory:getSelectedSlot()
+	return self.mainArea.children:get(self:getSelectedSlotIndex())
+end
+
 ---@return itemapi.InventoryWindow?
 function Inventory:getOtherWindow()
 	if self.isContainer then
@@ -86,10 +94,14 @@ function Inventory:getOtherWindow()
 end
 
 function Inventory:updateKeyboardTooltip()
-	local slotIndex = (self.selectedSlotY - 1) * self.inventory.numColumns + self.selectedSlotX
+	mod.client.tooltip = nil
+
+	local slotIndex = self:getSelectedSlotIndex()
 	local itemType = self.inventory:get(slotIndex)
-	if not itemType then
-		mod.client.tooltip = nil
+	if not itemType then return end
+
+	local draggedItem = mod.client.draggedInventoryItem
+	if draggedItem and draggedItem.window == self and draggedItem.slotIndex == slotIndex then
 		return
 	end
 
@@ -103,6 +115,29 @@ function Inventory:updateKeyboardTooltip()
 		y = slot.cachedTop + slot.height + FU,
 		anchorX = "center"
 	}
+end
+
+---@param slot ljgui.Item
+local function finishItemDragging(slot)
+	local cl = mod.client
+	local draggedItem = cl.draggedInventoryItem
+	local window = slot.parent.parent
+
+	mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
+		draggedItem.window.isContainer, draggedItem.slotIndex,
+		window.isContainer, slot.slotIndex
+	)
+
+	if window.inventory:isSlotUsed(slot.slotIndex)
+	and (window ~= draggedItem.window or slot.slotIndex ~= draggedItem.slotIndex) then
+		cl.draggedInventoryItem = {
+			byMouse = draggedItem.byMouse,
+			window = draggedItem.window,
+			slotIndex = draggedItem.slotIndex
+		}
+	else
+		cl.draggedInventoryItem = nil
+	end
 end
 
 ---@param key keyevent_t
@@ -119,13 +154,28 @@ function Inventory:onKeyPress(key)
 	elseif not key.repeated and keyName == "enter"
 	or mod.isKeyBoundToUICommand(keyName, "confirm")
 	or mod.isKeyBoundToUICommand(keyName, "open_action_selection") then
-		local slotIndex = (self.selectedSlotY - 1) * self.inventory.numColumns + self.selectedSlotX
+		if self:getOtherWindow() then
+			local cl = mod.client
 
-		local stream = nc.prepare(netCommand_carryInventoryItem)
-		bs.writeByte(stream, slotIndex)
-		mod.sendNetCommand(consoleplayer, stream)
+			if cl.draggedInventoryItem then
+				finishItemDragging(self:getSelectedSlot())
+			else
+				cl.draggedInventoryItem = {
+					byMouse = false,
+					window = self,
+					slotIndex = self:getSelectedSlotIndex()
+				}
+			end
+		else
+			local slotIndex = self:getSelectedSlotIndex()
 
-		mod.closeUI()
+			local stream = nc.prepare(netCommand_carryInventoryItem)
+			bs.writeByte(stream, slotIndex)
+			mod.sendNetCommand(consoleplayer, stream)
+
+			mod.closeUI()
+		end
+
 		return true
 	elseif not key.repeated and keyName == "tab"
 	or mod.isKeyBoundToGameControl(keyName, GC_CUSTOM3) then
@@ -144,6 +194,11 @@ function Inventory:onKeyPress(key)
 			self.selectedSlotX = self.inventory.numColumns
 		end
 
+		local draggedItem = mod.client.draggedInventoryItem
+		if draggedItem then
+			draggedItem.byMouse = false
+		end
+
 		self:updateKeyboardTooltip()
 
 		return true
@@ -153,6 +208,11 @@ function Inventory:onKeyPress(key)
 			self.selectedSlotX = $ + 1
 		else
 			self.selectedSlotX = 1
+		end
+
+		local draggedItem = mod.client.draggedInventoryItem
+		if draggedItem then
+			draggedItem.byMouse = false
 		end
 
 		self:updateKeyboardTooltip()
@@ -174,6 +234,11 @@ function Inventory:onKeyPress(key)
 			self.selectedSlotY = self.numRows
 		end
 
+		local draggedItem = mod.client.draggedInventoryItem
+		if draggedItem then
+			draggedItem.byMouse = false
+		end
+
 		self:updateKeyboardTooltip()
 
 		return true
@@ -191,6 +256,11 @@ function Inventory:onKeyPress(key)
 			end
 
 			self.selectedSlotY = 1
+		end
+
+		local draggedItem = mod.client.draggedInventoryItem
+		if draggedItem then
+			draggedItem.byMouse = false
 		end
 
 		self:updateKeyboardTooltip()
@@ -217,28 +287,14 @@ end
 ---@return boolean
 function Inventory.slot_onLeftMousePress(slot)
 	local window = slot.parent.parent
-	local draggedItem = mod.client.draggedInventoryItem
 
 	if slot.pressTime ~= nil then
 		slot.pressTime = nil
 		slot:removeEvent("Tick", Inventory.slot_onTick)
 	end
 
-	if draggedItem then
-		mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
-			draggedItem.window.isContainer, draggedItem.slotIndex,
-			window.isContainer, slot.slotIndex
-		)
-
-		if window.inventory:isSlotUsed(slot.slotIndex)
-		and (window ~= draggedItem.window or slot.slotIndex ~= draggedItem.slotIndex) then
-			mod.client.draggedInventoryItem = {
-				window = draggedItem.window,
-				slotIndex = draggedItem.slotIndex
-			}
-		else
-			mod.client.draggedInventoryItem = nil
-		end
+	if mod.client.draggedInventoryItem then
+		finishItemDragging(slot)
 	elseif mod.client.shiftHeld and window.inventory:isSlotUsed(slot.slotIndex) then
 		local dstWindow = window:getOtherWindow()
 
@@ -264,29 +320,37 @@ end
 ---@param mouse ljgui.Mouse
 ---@return boolean
 function Inventory.slot_onMouseMove(slot, mouse)
+	local cl = mod.client
 	local window = slot.parent.parent
 	local numColumns = window.inventory.numColumns
+	local draggedItem = cl.draggedInventoryItem
 
 	window.selectedSlotX = (slot.slotIndex - 1) % numColumns + 1
 	window.selectedSlotY =  (slot.slotIndex - 1) / numColumns + 1
 	window:focus()
 
 	local itemType = window.inventory:get(slot.slotIndex)
-	if itemType then
-		mod.client.tooltip = {
+	if itemType
+	and not (draggedItem and draggedItem.window == window and draggedItem.slotIndex == slot.slotIndex) then
+		cl.tooltip = {
 			type = "mouse",
 			text = mod.itemDefs[itemType].name
 		}
 	end
 
 	if slot.pressTime ~= nil then
-		mod.client.draggedInventoryItem = {
+		cl.draggedInventoryItem = {
+			byMouse = true,
 			window = window,
 			slotIndex = slot.slotIndex
 		}
 
 		slot.pressTime = nil
 		slot:removeEvent("Tick", Inventory.slot_onTick)
+	end
+
+	if draggedItem then
+		draggedItem.byMouse = true
 	end
 
 	return true
@@ -363,6 +427,22 @@ local function drawSlot(item, v)
 	if not type then return end
 
 	mod.drawInventoryItemStack(v, type, quantity, l, t, selected)
+end
+
+---@param v videolib
+function Inventory:draw(v)
+	base.draw(self, v)
+
+	local item = mod.client.draggedInventoryItem
+	if not (item and not item.byMouse and self.focused) then return end
+
+	local type, quantity = item.window.inventory:get(item.slotIndex)
+	if not type then return end
+
+	local slot = self:getSelectedSlot()
+	local x = slot.cachedLeft + 6*FU
+	local y = slot.cachedTop - 6*FU
+	mod.drawInventoryItemStack(v, type, quantity, x, y, false)
 end
 
 function Inventory:__init(props)

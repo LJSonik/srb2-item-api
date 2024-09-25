@@ -13,7 +13,7 @@ local drawMouseBase = gui.Mouse.draw
 ---@param v videolib
 function gui.Mouse:draw(v)
 	local item = mod.client.draggedInventoryItem
-	if item then
+	if item and item.byMouse then
 		local type, quantity = item.window.inventory:get(item.slotIndex)
 		if type then
 			local x = self.x - SLOT_SIZE / 2
