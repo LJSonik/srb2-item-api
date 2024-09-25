@@ -76,6 +76,15 @@ local Inventory, base = gui.class(gui.Window)
 mod.InventoryWindow = Inventory
 
 
+---@return itemapi.InventoryWindow?
+function Inventory:getOtherWindow()
+	if self.isContainer then
+		return gui.root.inventoryWindow
+	else
+		return gui.root.containerInventoryWindow
+	end
+end
+
 function Inventory:updateKeyboardTooltip()
 	local slotIndex = (self.selectedSlotY - 1) * self.inventory.numColumns + self.selectedSlotX
 	local itemType = self.inventory:get(slotIndex)
@@ -120,8 +129,7 @@ function Inventory:onKeyPress(key)
 		return true
 	elseif not key.repeated and keyName == "tab"
 	or mod.isKeyBoundToGameControl(keyName, GC_CUSTOM3) then
-		local root = gui.root
-		local otherWindow = self.isContainer and root.inventoryWindow or root.containerInventoryWindow
+		local otherWindow = self:getOtherWindow()
 
 		if otherWindow then
 			otherWindow:focus()
@@ -155,6 +163,14 @@ function Inventory:onKeyPress(key)
 		if self.selectedSlotY > 1 then
 			self.selectedSlotY = $ - 1
 		else
+			local otherWindow = self:getOtherWindow()
+
+			if otherWindow then
+				otherWindow:focus()
+				otherWindow.selectedSlotX = min(self.selectedSlotX, otherWindow.inventory.numColumns)
+				otherWindow.selectedSlotY = otherWindow.numRows
+			end
+
 			self.selectedSlotY = self.numRows
 		end
 
@@ -166,6 +182,14 @@ function Inventory:onKeyPress(key)
 		if self.selectedSlotY < self.numRows then
 			self.selectedSlotY = $ + 1
 		else
+			local otherWindow = self:getOtherWindow()
+
+			if otherWindow then
+				otherWindow:focus()
+				otherWindow.selectedSlotX = min(self.selectedSlotX, otherWindow.inventory.numColumns)
+				otherWindow.selectedSlotY = 1
+			end
+
 			self.selectedSlotY = 1
 		end
 
@@ -216,8 +240,7 @@ function Inventory.slot_onLeftMousePress(slot)
 			mod.client.draggedInventoryItem = nil
 		end
 	elseif mod.client.shiftHeld and window.inventory:isSlotUsed(slot.slotIndex) then
-		local root = gui.root
-		local dstWindow = window.isContainer and root.inventoryWindow or root.containerInventoryWindow
+		local dstWindow = window:getOtherWindow()
 
 		if dstWindow then
 			local dstSlotIndex = findFreeInventorySlot(dstWindow.inventory)
