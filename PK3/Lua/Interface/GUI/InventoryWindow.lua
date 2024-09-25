@@ -98,6 +98,16 @@ function Inventory:onKeyPress(key)
 
 		mod.closeUI()
 		return true
+	elseif not key.repeated and keyName == "tab"
+	or mod.isKeyBoundToGameControl(keyName, GC_CUSTOM3) then
+		local root = gui.root
+		local otherWindow = self.isContainer and root.inventoryWindow or root.containerInventoryWindow
+
+		if otherWindow then
+			otherWindow:focus()
+		end
+
+		return true
 	elseif keyName == "left arrow"
 	or mod.isKeyBoundToGameControl(keyName, GC_STRAFELEFT) then
 		if self.selectedSlotX > 1 then
@@ -208,6 +218,7 @@ function Inventory.slot_onMouseMove(slot, mouse)
 
 	window.selectedSlotX = (slot.slotIndex - 1) % numColumns + 1
 	window.selectedSlotY =  (slot.slotIndex - 1) / numColumns + 1
+	window:focus()
 
 	if slot.pressTime ~= nil then
 		mod.client.draggedInventoryItem = {
@@ -271,7 +282,7 @@ end
 local function drawSlot(item, v)
 	local window = item.parent.parent
 	local selectedIndex = (window.selectedSlotY - 1) * window.inventory.numColumns + window.selectedSlotX
-	local selected = (selectedIndex == item.slotIndex)
+	local selected = (window.focused and selectedIndex == item.slotIndex)
 	local l, t = item.cachedLeft, item.cachedTop
 	local w, h = item.width, item.height
 

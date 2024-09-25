@@ -150,15 +150,15 @@ function mod.handleMenuStandardKeyPress(key)
 	) then
 		mod.focusMenuList()
 		return true
-	elseif keyName == "tab" then
-		if mod.client.menuOpen then
-			if mod.client.shiftHeld then
-				mod.selectPreviousMenu()
-			else
-				mod.selectNextMenu()
-			end
-			mod.focusMenu()
+	elseif mod.client.menuOpen and keyName == "tab" then
+		if mod.client.shiftHeld then
+			mod.selectPreviousMenu()
+		else
+			mod.selectNextMenu()
 		end
+
+		mod.focusMenu()
+
 		return true
 	end
 
