@@ -27,6 +27,8 @@ local function onKeyPress(item, key)
 	if key.repeated then return false end
 
 	local numElems = item.children:getLength()
+	if numElems == 0 then return true end
+
 	local numColumns = item.layoutRules.gridColumns
 	local numRows = (numElems - 1) / numColumns + 1
 

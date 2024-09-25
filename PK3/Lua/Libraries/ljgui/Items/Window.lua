@@ -11,8 +11,10 @@ local gui = ljrequire "ljgui.common"
 ---@field style ljgui.WindowStyle
 ---@field mainArea ljgui.Rectangle
 ---
----@field moving boolean
+---@field movable boolean
+---@field moving  boolean
 ---
+---@field resizable            boolean
 ---@field resizing             boolean
 ---@field resizingHorizontally integer
 ---@field resizingVertically   integer
@@ -79,7 +81,6 @@ function Window:__init(props)
 	self.debug = "Window"
 
 	if props then
-		self:setTitle(props.title)
 		self:build(props)
 	end
 
@@ -94,6 +95,20 @@ end
 function Window:build(props)
 	self:applyProps(props)
 	self.mainArea:attach(self)
+
+	self:setTitle(props.title)
+
+	if props.movable ~= nil then
+		self:setMovable(props.movable)
+	else
+		self:setMovable(true)
+	end
+
+	if props.resizable ~= nil then
+		self:setResizable(props.resizable)
+	else
+		self:setResizable(true)
+	end
 end
 
 ---@param props? ljgui.ItemProps
@@ -147,6 +162,16 @@ end
 ---@param title string
 function Window:setTitle(title)
 	self.title = title
+end
+
+---@param movable boolean
+function Window:setMovable(movable)
+	self.movable = movable
+end
+
+---@param resizable boolean
+function Window:setResizable(resizable)
+	self.resizable = resizable
 end
 
 ---@return fixed_t
@@ -217,7 +242,7 @@ end
 -- 	local mainArea = self.children:getFront()
 -- 	if mainArea.children:getLength() then
 -- 		for _, child in mainArea.children:reverseIterate() do
--- 			if gui.v.RandomChance(FU/16) then
+-- 			if gui.v.RandomChance(FU / 16) then
 -- 				fall(child)
 -- 			end
 -- 		end
@@ -319,9 +344,9 @@ function Window:stopResize()
 end
 
 ---@param mouse ljgui.Mouse
----@return boolean
+---@return boolean?
 function Window:onMouseMove(mouse)
-	if self.moving or self.resizing then return end
+	if not self.resizable or self.moving or self.resizing then return end
 
 	local h, v = self:getPointedBorders()
 
@@ -348,10 +373,10 @@ end
 ---@param mouse ljgui.Mouse
 ---@return boolean
 function Window:onLeftMousePress(mouse)
-	if self:isPointInBorder(mouse.x, mouse.y) then
+	if self.resizable and self:isPointInBorder(mouse.x, mouse.y) then
 		self:startResize()
 		return true
-	elseif self:isPointInTitleBar(mouse.x, mouse.y) then
+	elseif self.movable and self:isPointInTitleBar(mouse.x, mouse.y) then
 		self:startMove()
 		return true
 	else
