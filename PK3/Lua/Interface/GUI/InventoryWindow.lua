@@ -183,6 +183,7 @@ function Inventory:onKeyPress(key)
 
 		if otherWindow then
 			otherWindow:focus()
+			otherWindow:updateKeyboardTooltip()
 		end
 
 		return true
@@ -222,48 +223,54 @@ function Inventory:onKeyPress(key)
 	or mod.isKeyBoundToGameControl(keyName, GC_FORWARD) then
 		if self.selectedSlotY > 1 then
 			self.selectedSlotY = $ - 1
-		else
+			self:updateKeyboardTooltip()
+		else -- Either wrapping to other side or switching to other window
 			local otherWindow = self:getOtherWindow()
+
+			self.selectedSlotY = self.numRows
 
 			if otherWindow then
 				otherWindow:focus()
 				otherWindow.selectedSlotX = min(self.selectedSlotX, otherWindow.inventory.numColumns)
 				otherWindow.selectedSlotY = otherWindow.numRows
-			end
 
-			self.selectedSlotY = self.numRows
+				otherWindow:updateKeyboardTooltip()
+			else
+				self:updateKeyboardTooltip()
+			end
 		end
 
 		local draggedItem = mod.client.draggedInventoryItem
 		if draggedItem then
 			draggedItem.byMouse = false
 		end
-
-		self:updateKeyboardTooltip()
 
 		return true
 	elseif keyName == "down arrow"
 	or mod.isKeyBoundToGameControl(keyName, GC_BACKWARD) then
 		if self.selectedSlotY < self.numRows then
 			self.selectedSlotY = $ + 1
-		else
+			self:updateKeyboardTooltip()
+		else -- Either wrapping to other side or switching to other window
 			local otherWindow = self:getOtherWindow()
+
+			self.selectedSlotY = 1
 
 			if otherWindow then
 				otherWindow:focus()
 				otherWindow.selectedSlotX = min(self.selectedSlotX, otherWindow.inventory.numColumns)
 				otherWindow.selectedSlotY = 1
-			end
 
-			self.selectedSlotY = 1
+				otherWindow:updateKeyboardTooltip()
+			else
+				self:updateKeyboardTooltip()
+			end
 		end
 
 		local draggedItem = mod.client.draggedInventoryItem
 		if draggedItem then
 			draggedItem.byMouse = false
 		end
-
-		self:updateKeyboardTooltip()
 
 		return true
 	end
