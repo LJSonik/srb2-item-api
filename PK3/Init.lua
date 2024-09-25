@@ -64,6 +64,7 @@ for _, filename in ipairs{
 	"Interface/KeyBind.lua",
 	"Interface/Interface.lua",
 	"Interface/Mouse.lua",
+	"Interface/Tooltip.lua",
 	"Interface/ActionTargetIcon.lua",
 	"Interface/ControlOptions.lua",
 
