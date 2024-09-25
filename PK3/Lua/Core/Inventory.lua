@@ -199,7 +199,12 @@ function Inventory:setSlot(slotIndex, id, quantity)
 	end
 
 	self.types[slotIndex] = id
-	self.quantities[slotIndex] = quantity
+
+	if id then
+		self.quantities[slotIndex] = quantity
+	else
+		self.quantities[slotIndex] = nil
+	end
 end
 
 ---Removes anything in the specified slot
