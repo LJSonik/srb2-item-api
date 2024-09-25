@@ -89,6 +89,9 @@ function OptionsWindow:__init(props)
 		size = { 256*FU, 160*FU },
 		autoLayout = "OnePerLine",
 
+		movable = false,
+		resizable = false,
+
 		self.grid,
 		gui.VerticalScrollbar {
 			target = self.grid,

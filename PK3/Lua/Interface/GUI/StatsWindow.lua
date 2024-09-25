@@ -47,6 +47,9 @@ function Stats:__init(props)
 		width = 64*FU,
 		height = 32*FU,
 
+		movable = false,
+		resizable = false,
+
 		autoLayout = "Flow",
 		style = windowStyle
 	})

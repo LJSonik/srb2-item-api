@@ -478,6 +478,9 @@ function Inventory:__init(props)
 		width = inventory.numColumns * (SLOT_SIZE + FU) + 3*FU,
 		height = self.numRows * (SLOT_SIZE + FU) + 11*FU,
 
+		movable = false,
+		resizable = false,
+
 		autoLayout = "Flow",
 		style = windowStyle,
 		onKeyPress = self.onKeyPress,

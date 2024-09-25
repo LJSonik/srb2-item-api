@@ -104,6 +104,9 @@ function CraftingWindow:__init(props)
 	base.__init(self, {
 		size = { 192*FU, 160*FU },
 
+		movable = false,
+		resizable = false,
+
 		autoLayout = "OnePerLine",
 		onKeyPress = self.onKeyPress,
 
