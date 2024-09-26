@@ -12,6 +12,10 @@ local ljclass = ljrequire "ljclass"
 ---@class itemapi.Inventory : ljclass.Class
 ---@field numSlots   integer
 ---@field numColumns integer
+---
+---@field protected types      integer[]
+---@field protected quantities integer[]
+---@field protected data       any[]
 local Inventory = ljclass.class()
 mod.Inventory = Inventory
 
@@ -24,13 +28,18 @@ function Inventory:__init(numSlots, numColumns)
 
 	self.types = {}
 	self.quantities = {}
+	self.data = {}
 end
 
 ---@param slotIndex integer The slot index
 ---@return integer id The numeric ID of the item contained in the slot
 ---@return integer quantity How many items are contained in the slot
+---@return any? data Optional extra data of the item contained in the slot
 function Inventory:get(slotIndex)
-	return self.types[slotIndex], self.quantities[slotIndex]
+	return
+		self.types[slotIndex],
+		self.quantities[slotIndex],
+		self.data[slotIndex]
 end
 
 ---@param slotIndex integer The slot index
@@ -86,8 +95,9 @@ end
 
 ---@param id itemapi.ItemType
 ---@param quantity? integer Defaults to 1
+---@param data? any
 ---@return boolean added True if the item(s) was/were added. If not, the inventory does not have enough available space.
-function Inventory:add(id, quantity)
+function Inventory:add(id, quantity, data)
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -103,7 +113,7 @@ function Inventory:add(id, quantity)
 		if self.types[i] ~= id then continue end
 
 		local room = min(maxPerSlot - self.quantities[i], quantity)
-		self:addToSlot(i, id, room)
+		self:addToSlot(i, id, room, data)
 		quantity = $ - room
 		if quantity == 0 then return true end
 	end
@@ -112,7 +122,7 @@ function Inventory:add(id, quantity)
 		if self.types[i] ~= nil then continue end
 
 		local room = min(maxPerSlot, quantity)
-		self:addToSlot(i, id, room)
+		self:addToSlot(i, id, room, data)
 		quantity = $ - room
 		if quantity == 0 then return true end
 	end
@@ -148,7 +158,8 @@ end
 ---@param slotIndex integer The slot index
 ---@param id itemapi.ItemType
 ---@param quantity? integer Defaults to 1
-function Inventory:addToSlot(slotIndex, id, quantity)
+---@param data? any
+function Inventory:addToSlot(slotIndex, id, quantity, data)
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -158,6 +169,7 @@ function Inventory:addToSlot(slotIndex, id, quantity)
 
 	self.types[slotIndex] = id
 	self.quantities[slotIndex] = ($ or 0) + quantity
+	self.data[slotIndex] = data
 end
 
 ---@param slotIndex integer The slot index
@@ -166,6 +178,7 @@ end
 function Inventory:removeFromSlot(slotIndex, quantity)
 	local types = self.types
 	local quantities = self.quantities
+	local data = self.data
 
 	if quantity == nil then
 		quantity = 1
@@ -182,6 +195,7 @@ function Inventory:removeFromSlot(slotIndex, quantity)
 	if quantities[slotIndex] == 0 then
 		types[slotIndex] = nil
 		quantities[slotIndex] = nil
+		data[slotIndex] = nil
 	end
 
 	return id
@@ -190,7 +204,8 @@ end
 ---@param slotIndex integer The slot index
 ---@param id itemapi.ItemType
 ---@param quantity? integer Defaults to 1
-function Inventory:setSlot(slotIndex, id, quantity)
+---@param data? any
+function Inventory:setSlot(slotIndex, id, quantity, data)
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -202,8 +217,10 @@ function Inventory:setSlot(slotIndex, id, quantity)
 
 	if id then
 		self.quantities[slotIndex] = quantity
+		self.data[slotIndex] = data
 	else
 		self.quantities[slotIndex] = nil
+		self.data[slotIndex] = nil
 	end
 end
 
@@ -212,4 +229,5 @@ end
 function Inventory:resetSlot(slotIndex)
 	self.types[slotIndex] = nil
 	self.quantities[slotIndex] = nil
+	self.data[slotIndex] = nil
 end

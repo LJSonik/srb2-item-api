@@ -91,8 +91,9 @@ end
 
 ---@param player player_t
 ---@param itemType integer
+---@param itemData? any
 ---@return mobj_t?
-function mod.placeItem(player, itemType)
+function mod.placeItem(player, itemType, itemData)
 	local def = mod.itemDefs[itemType]
 
 	local bestX, bestY, bestZ
@@ -118,6 +119,8 @@ function mod.placeItem(player, itemType)
 			mo.angle = mod.snapAngleToCardinalDirection($)
 		end
 
+		mo.itemapi_data = itemData
+
 		if def.onPlace then
 			def.onPlace(mo)
 		end
@@ -132,7 +135,8 @@ function mod.placeCarriedItem(player)
 	local itemType = mod.getMainCarriedItemType(player)
 	if not itemType then return nil end
 
-	local mo = mod.placeItem(player, itemType)
+	local slot = player.itemapi_carrySlots["right_hand"]
+	local mo = mod.placeItem(player, itemType, slot.itemData)
 
 	if mo then
 		mod.uncarryItem(player)

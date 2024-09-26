@@ -32,9 +32,11 @@ local netCommand_carryInventoryItem = nc.add(function(p, stream)
 
 	if not p.itemapi_inventory or mod.getMainCarriedItemType(p) then return end
 
-	local itemType = p.itemapi_inventory:removeFromSlot(slotIndex)
+	local itemType, _, itemData = p.itemapi_inventory:get(slotIndex)
+	p.itemapi_inventory:removeFromSlot(slotIndex)
+
 	if itemType then
-		mod.carryItem(p, itemType)
+		mod.carryItem(p, itemType, itemData)
 		p.itemapi_carrySlots["right_hand"].multiple = true
 	end
 end)
@@ -51,22 +53,22 @@ local netCommand_moveInventoryItemBetweenPlayerAndContainer = nc.add(function(p,
 	end
 
 	---@type itemapi.Inventory
-	local srcInventory = srcIsContainer and mo.inventory or p.itemapi_inventory
-	local srcType, srcQuantity = srcInventory:get(srcIndex)
+	local srcInventory = srcIsContainer and mo.itemapi_data.inventory or p.itemapi_inventory
+	local srcType, srcQuantity, srcData = srcInventory:get(srcIndex)
 
 	---@type itemapi.Inventory
-	local dstInventory = dstIsContainer and mo.inventory or p.itemapi_inventory
-	local dstType, dstQuantity = dstInventory:get(dstIndex)
+	local dstInventory = dstIsContainer and mo.itemapi_data.inventory or p.itemapi_inventory
+	local dstType, dstQuantity, dstData = dstInventory:get(dstIndex)
 
 	if srcType == dstType then
 		local dstDef = mod.itemDefs[dstType]
 		local dstRoom = max(dstDef.stackable - dstQuantity, 0)
 
 		srcInventory:removeFromSlot(srcIndex, dstRoom)
-		dstInventory:addToSlot(dstIndex, dstType, dstRoom)
+		dstInventory:addToSlot(dstIndex, dstType, dstRoom, dstData)
 	else
-		srcInventory:setSlot(srcIndex, dstType, dstQuantity)
-		dstInventory:setSlot(dstIndex, srcType, srcQuantity)
+		srcInventory:setSlot(srcIndex, dstType, dstQuantity, dstData)
+		dstInventory:setSlot(dstIndex, srcType, srcQuantity, srcData)
 	end
 end)
 
@@ -81,11 +83,11 @@ local netCommand_quickMoveInventoryItemBetweenPlayerAndContainer = nc.add(functi
 	end
 
 	---@type itemapi.Inventory
-	local srcInventory = srcIsContainer and mo.inventory or p.itemapi_inventory
-	local srcType, srcQuantity = srcInventory:get(srcIndex)
+	local srcInventory = srcIsContainer and mo.itemapi_data.inventory or p.itemapi_inventory
+	local srcType, srcQuantity, srcData = srcInventory:get(srcIndex)
 
 	---@type itemapi.Inventory
-	local dstInventory = dstIsContainer and mo.inventory or p.itemapi_inventory
+	local dstInventory = dstIsContainer and mo.itemapi_data.inventory or p.itemapi_inventory
 
 	local maxPerSlot = mod.itemDefs[srcType].stackable
 
@@ -95,7 +97,7 @@ local netCommand_quickMoveInventoryItemBetweenPlayerAndContainer = nc.add(functi
 
 		local room = min(maxPerSlot - dstQuantity, srcQuantity)
 		srcInventory:removeFromSlot(srcIndex, room)
-		dstInventory:addToSlot(i, srcType, room)
+		dstInventory:addToSlot(i, srcType, room, srcData)
 		srcQuantity = $ - room
 		if srcQuantity == 0 then return end
 	end
@@ -105,7 +107,7 @@ local netCommand_quickMoveInventoryItemBetweenPlayerAndContainer = nc.add(functi
 
 		local room = min(maxPerSlot, srcQuantity)
 		srcInventory:removeFromSlot(srcIndex, room)
-		dstInventory:addToSlot(i, srcType, room)
+		dstInventory:addToSlot(i, srcType, room, srcData)
 		srcQuantity = $ - room
 		if srcQuantity == 0 then return end
 	end

@@ -13,6 +13,7 @@ local mod = itemapi
 
 ---@class itemapi.CarrySlot
 ---@field itemType integer
+---@field itemData any
 ---@field mobj mobj_t
 ---@field multiple? boolean
 

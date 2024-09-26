@@ -66,10 +66,10 @@ local netCommand_performMobjAction = nc.add(function(p, stream)
 end)
 
 local netCommand_storeCarriedItem = nc.add(function(p)
-	local id = mod.getMainCarriedItemType(p)
-	if not id then return end
+	local slot = p.itemapi_carrySlots["right_hand"]
+	if not slot then return end
 
-	if p.itemapi_inventory:add(id) then
+	if p.itemapi_inventory:add(slot.itemType, 1, slot.itemData) then
 		mod.uncarryItem(p)
 	end
 end)
@@ -78,7 +78,7 @@ local netCommand_placeCarriedItem = nc.add(function(p)
 	local slot = p.itemapi_carrySlots["right_hand"]
 	if not slot then return end
 
-	if mod.placeItem(p, slot.itemType) then
+	if mod.placeItem(p, slot.itemType, slot.itemData) then
 		mod.smartUncarryItem(p)
 	end
 end)
@@ -90,6 +90,8 @@ local netCommand_carryMobj = nc.add(function(p)
 
 	local itemType = mod.getItemTypeFromMobj(mo)
 	if itemType and mod.carryItem(p, itemType) then
+		local slot = p.itemapi_carrySlots["right_hand"]
+		slot.itemData = mo.itemapi_data
 		P_RemoveMobj(mo)
 	end
 end)

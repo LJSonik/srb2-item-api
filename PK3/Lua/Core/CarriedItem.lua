@@ -68,9 +68,10 @@ end
 ---The player only takes the item if their hands are free.
 ---@param player player_t
 ---@param itemType itemapi.ItemType
+---@param itemData? any
 ---@param slotID? string|integer
 ---@return boolean carried True if the item was put in the player's hand.
-function mod.carryItem(player, itemType, slotID)
+function mod.carryItem(player, itemType, itemData, slotID)
 	slotID = $ or "right_hand"
 
 	if player.itemapi_carrySlots[slotID] then return false end
@@ -78,7 +79,10 @@ function mod.carryItem(player, itemType, slotID)
 	local slotDef = mod.carrySlotDefs[slotID]
 	local itemDef = mod.itemDefs[itemType]
 
-	local slot = { itemType = itemDef.index }
+	local slot = {
+		itemType = itemDef.index,
+		itemData = itemData
+	}
 
 	player.itemapi_carrySlots[slotDef.index] = slot
 	player.itemapi_carrySlots[slotDef.id] = slot
