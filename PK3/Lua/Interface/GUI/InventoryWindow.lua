@@ -58,8 +58,57 @@ local netCommand_moveInventoryItemBetweenPlayerAndContainer = nc.add(function(p,
 	local dstInventory = dstIsContainer and mo.inventory or p.itemapi_inventory
 	local dstType, dstQuantity = dstInventory:get(dstIndex)
 
-	srcInventory:setSlot(srcIndex, dstType, dstQuantity)
-	dstInventory:setSlot(dstIndex, srcType, srcQuantity)
+	if srcType == dstType then
+		local dstDef = mod.itemDefs[dstType]
+		local dstRoom = max(dstDef.stackable - dstQuantity, 0)
+
+		srcInventory:removeFromSlot(srcIndex, dstRoom)
+		dstInventory:addToSlot(dstIndex, dstType, dstRoom)
+	else
+		srcInventory:setSlot(srcIndex, dstType, dstQuantity)
+		dstInventory:setSlot(dstIndex, srcType, srcQuantity)
+	end
+end)
+
+local netCommand_quickMoveInventoryItemBetweenPlayerAndContainer = nc.add(function(p, stream)
+	local srcIsContainer = (bs.readBit(stream) == 1)
+	local srcIndex = bs.readByte(stream)
+	local dstIsContainer = not srcIsContainer
+
+	local mo = p.itemapi_mobjActionTarget
+	if not (mo and mo.valid) then
+		return
+	end
+
+	---@type itemapi.Inventory
+	local srcInventory = srcIsContainer and mo.inventory or p.itemapi_inventory
+	local srcType, srcQuantity = srcInventory:get(srcIndex)
+
+	---@type itemapi.Inventory
+	local dstInventory = dstIsContainer and mo.inventory or p.itemapi_inventory
+
+	local maxPerSlot = mod.itemDefs[srcType].stackable
+
+	for i = 1, dstInventory.numSlots do
+		local dstType, dstQuantity = dstInventory:get(i)
+		if dstType ~= srcType then continue end
+
+		local room = min(maxPerSlot - dstQuantity, srcQuantity)
+		srcInventory:removeFromSlot(srcIndex, room)
+		dstInventory:addToSlot(i, srcType, room)
+		srcQuantity = $ - room
+		if srcQuantity == 0 then return end
+	end
+
+	for i = 1, dstInventory.numSlots do
+		if dstInventory:get(i) ~= nil then continue end
+
+		local room = min(maxPerSlot, srcQuantity)
+		srcInventory:removeFromSlot(srcIndex, room)
+		dstInventory:addToSlot(i, srcType, room)
+		srcQuantity = $ - room
+		if srcQuantity == 0 then return end
+	end
 end)
 
 
@@ -69,6 +118,13 @@ function mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(srcIsCont
 	bs.writeByte(stream, srcSlotIndex)
 	bs.writeBit(stream, dstIsContainer and 1 or 0)
 	bs.writeByte(stream, dstSlotIndex)
+	mod.sendNetCommand(consoleplayer, stream)
+end
+
+function mod.sendNetCommand_quickMoveInventoryItemBetweenPlayerAndContainer(srcIsContainer, srcSlotIndex)
+	local stream = nc.prepare(netCommand_quickMoveInventoryItemBetweenPlayerAndContainer)
+	bs.writeBit(stream, srcIsContainer and 1 or 0)
+	bs.writeByte(stream, srcSlotIndex)
 	mod.sendNetCommand(consoleplayer, stream)
 end
 
@@ -131,26 +187,37 @@ function Inventory:updateKeyboardTooltip()
 	}
 end
 
----@param slot ljgui.Item
-local function finishItemDragging(slot)
+---@param dstSlot ljgui.Item
+local function finishItemDragging(dstSlot)
 	local cl = mod.client
 	local draggedItem = cl.draggedInventoryItem
-	local window = slot.parent.parent
+	local srcWindow = draggedItem.window
+	local srcSlotIndex = draggedItem.slotIndex
+	local dstWindow = dstSlot.parent.parent
+	local dstSlotIndex = dstSlot.slotIndex
+
+	if dstWindow == srcWindow and dstSlotIndex == srcSlotIndex then
+		cl.draggedInventoryItem = nil
+		return
+	end
 
 	mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
-		draggedItem.window.isContainer, draggedItem.slotIndex,
-		window.isContainer, slot.slotIndex
+		srcWindow.isContainer, srcSlotIndex,
+		dstWindow.isContainer, dstSlotIndex
 	)
 
-	if window.inventory:isSlotUsed(slot.slotIndex)
-	and (window ~= draggedItem.window or slot.slotIndex ~= draggedItem.slotIndex) then
-		cl.draggedInventoryItem = {
-			byMouse = draggedItem.byMouse,
-			window = draggedItem.window,
-			slotIndex = draggedItem.slotIndex
-		}
-	else
+	local srcType, srcQuantity = srcWindow.inventory:get(srcSlotIndex)
+	local dstType, dstQuantity = dstWindow.inventory:get(dstSlotIndex)
+
+	if not dstType then
 		cl.draggedInventoryItem = nil
+	elseif srcType == dstType then
+		local dstDef = mod.itemDefs[dstType]
+		local dstRoom = dstDef.stackable - dstQuantity
+
+		if srcQuantity <= dstRoom then
+			cl.draggedInventoryItem = nil
+		end
 	end
 end
 
@@ -323,10 +390,7 @@ function Inventory.slot_onLeftMousePress(slot)
 			local dstSlotIndex = findFreeInventorySlot(dstWindow.inventory)
 
 			if dstSlotIndex then
-				mod.sendNetCommand_moveInventoryItemBetweenPlayerAndContainer(
-					window.isContainer, slot.slotIndex,
-					not window.isContainer, dstSlotIndex
-				)
+				mod.sendNetCommand_quickMoveInventoryItemBetweenPlayerAndContainer(window.isContainer, slot.slotIndex)
 			end
 		end
 	else
