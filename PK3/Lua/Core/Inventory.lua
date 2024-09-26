@@ -73,7 +73,7 @@ function Inventory:canAdd(id, quantity)
 
 	for i = 1, self.numSlots do
 		if self.types[i] ~= id then continue end
-		quantity = $ - maxPerSlot - self.quantities[i]
+		quantity = $ - (maxPerSlot - self.quantities[i])
 	end
 
 	for i = 1, self.numSlots do
