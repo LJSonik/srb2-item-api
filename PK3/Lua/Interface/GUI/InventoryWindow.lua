@@ -60,12 +60,13 @@ local netCommand_moveInventoryItemBetweenPlayerAndContainer = nc.add(function(p,
 	local dstInventory = dstIsContainer and mo.itemapi_data.inventory or p.itemapi_inventory
 	local dstType, dstQuantity, dstData = dstInventory:get(dstIndex)
 
-	if srcType == dstType then
+	if dstType and srcType == dstType then
 		local dstDef = mod.itemDefs[dstType]
 		local dstRoom = max(dstDef.stackable - dstQuantity, 0)
+		local addedQuantity = min(srcQuantity, dstRoom)
 
-		srcInventory:removeFromSlot(srcIndex, dstRoom)
-		dstInventory:addToSlot(dstIndex, dstType, dstRoom, dstData)
+		srcInventory:removeFromSlot(srcIndex, addedQuantity)
+		dstInventory:addToSlot(dstIndex, dstType, addedQuantity, dstData)
 	else
 		srcInventory:setSlot(srcIndex, dstType, dstQuantity, dstData)
 		dstInventory:setSlot(dstIndex, srcType, srcQuantity, srcData)
