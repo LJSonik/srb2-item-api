@@ -18,9 +18,23 @@ end
 function mod.updateHunger(player)
 	local oldHunger = player.itemapi_hunger
 
-	player.itemapi_hunger = max($ - 1, 0)
+	local freq
+	if oldHunger > mod.MAX_HUNGER / 10 then -- 10-100%
+		freq = 1
+	elseif oldHunger > mod.MAX_HUNGER / 20 then -- 5-10%
+		freq = 2
+	else -- 0-5%
+		freq = 5
+	end
 
-	if player.itemapi_hunger == 0 and player.itemapi_hunger ~= oldHunger then
+	local newHunger
+	if leveltime % freq == 0 then
+		newHunger = max(oldHunger - 1, 0)
+	end
+
+	player.itemapi_hunger = newHunger
+
+	if newHunger == 0 and newHunger ~= oldHunger then
 		P_DamageMobj(player.mo, nil, nil, nil, DMG_INSTAKILL)
 	end
 end
