@@ -69,6 +69,9 @@ local netCommand_storeCarriedItem = nc.add(function(p)
 	local slot = p.itemapi_carrySlots["right_hand"]
 	if not slot then return end
 
+	local itemDef = mod.itemDefs[slot.itemType]
+	if not itemDef.storable then return end
+
 	if p.itemapi_inventory:add(slot.itemType, 1, slot.itemData) then
 		mod.uncarryItem(p)
 	end
@@ -289,8 +292,13 @@ mod.addUIMode("action_selection", {
 			action = function()
 				if not checkSelectionValidity() then return end
 
-				if mod.getMainCarriedItemType(consoleplayer) then
-					mod.sendNetCommand_storeCarriedItem()
+				local itemType = mod.getMainCarriedItemType(consoleplayer)
+
+				if itemType then
+					local def = mod.itemDefs[itemType]
+					if def.storable then
+						mod.sendNetCommand_storeCarriedItem()
+					end
 				elseif mod.client.actionSelection.mobj then
 					local def = mod.getItemDefFromMobj(mod.client.actionSelection.mobj)
 					if def and def.carriable then
