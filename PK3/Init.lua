@@ -59,6 +59,8 @@ for _, filename in ipairs{
 	"Core/Culling.lua",
 	"Core/Particle.lua",
 	"Core/Hunger.lua",
+	"Core/SpriteText.lua",
+	"Core/InfoBubbles.lua",
 	"Core/Options.lua",
 
 	"Interface/KeyBind.lua",

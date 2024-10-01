@@ -5,9 +5,6 @@ local mod = itemapi
 local gui = ljrequire "ljgui"
 
 
-freeslot("SPR_IAPI")
-
-
 ---@class itemapi.UICommandDef
 ---@field id string
 ---@field index integer

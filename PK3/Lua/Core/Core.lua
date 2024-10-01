@@ -12,6 +12,9 @@ local nc = ljrequire "ljnetcommand"
 ---@field itemapi_initialised boolean
 
 
+freeslot("SPR_IAPI")
+
+
 ---@type { [any]: integer }
 mod.entityToID = {}
 
@@ -77,6 +80,7 @@ function mod.initialisePlayer(p)
 	p.itemapi_carrySlots = {}
 	p.itemapi_inventory = mod.Inventory(8, 4)
 	p.itemapi_hunger = mod.MAX_HUNGER
+	p.itemapi_infoBubbles = {}
 
 	p.itemapi_initialised = true
 end
@@ -139,6 +143,7 @@ addHook("ThinkFrame", function()
 			mod.updateAction(p)
 		end
 		mod.updateHunger(p)
+		mod.updateInfoBubbles(p)
 	end
 
 	mod.updateTickers()
@@ -194,6 +199,10 @@ end)
 addHook("PlayerQuit", function(p)
 	for i = 1, #mod.carrySlotDefs do
 		mod.uncarryItem(p, i)
+	end
+
+	for i = 1, #p.itemapi_infoBubbles do
+		mod.stopInfoBubble(p, p.itemapi_infoBubbles[i])
 	end
 end)
 
