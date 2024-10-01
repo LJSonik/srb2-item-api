@@ -155,7 +155,7 @@ end
 ---@return spritenum_t
 ---@return number
 function mod.parseSpriteFramePair(s)
-	local spritePart, framePart = s:find("(.*):(.*)")
+	local _, _, spritePart, framePart = s:find("(.*):(.*)")
 
 	local sprite = _G["SPR_" .. spritePart]
 
