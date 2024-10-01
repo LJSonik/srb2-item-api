@@ -27,9 +27,9 @@ function mod.updateHunger(player)
 		freq = 5
 	end
 
-	local newHunger
+	local newHunger = oldHunger
 	if leveltime % freq == 0 then
-		newHunger = max(oldHunger - 1, 0)
+		newHunger = max($ - 1, 0)
 	end
 
 	player.itemapi_hunger = newHunger
