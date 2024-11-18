@@ -8,6 +8,93 @@ local PLACEMENT_CHECK_STEP = 8*FU
 
 ---@param x fixed_t
 ---@param y fixed_t
+---@param radius fixed_t
+---@param fof? ffloor_t
+---@return fixed_t
+local function findItemFloorZOnSurface(x, y, radius, fof)
+	local l, b = x - radius, y - radius
+	local r, t = x + radius, y + radius
+
+	local sector = R_PointInSubsectorOrNil(x, y).sector
+	local slope
+
+	if fof then
+		slope = fof.t_slope
+
+		if not slope then
+			return fof.topheight
+		end
+	else
+		slope = sector.f_slope
+
+		if not slope then
+			return sector.floorheight
+		end
+	end
+
+	local highestZ = INT32_MIN
+
+	for x = l, r, radius do
+		for y = b, t, radius do
+			local ss = R_PointInSubsectorOrNil(x, y)
+			if not (ss and ss.sector == sector) then continue end
+
+			local z = P_GetZAt(slope, x, y)
+			if highestZ < z then
+				highestZ = z
+			end
+		end
+	end
+
+	return highestZ
+end
+
+---After a valid surface has been found, this is used to potentially adjust the position
+---of the item if other solid objects are blocking this specific position.
+---If no suitable position is found close enough to the desired position, returns nil
+---@param p player_t
+---@param cx fixed_t
+---@param cy fixed_t
+---@param fof? ffloor_t
+---@param radius fixed_t
+---@param height fixed_t
+---@return fixed_t?
+---@return fixed_t?
+---@return fixed_t?
+local function adjustItemPlacementPosition(p, cx, cy, fof, radius, height)
+	local distStep = radius * 2 * 9/8
+	local maxDist = min(4 * distStep, 64*FU)
+	local sector = R_PointInSubsectorOrNil(cx, cy).sector
+
+	for dist = 0, maxDist, distStep do
+		-- Limited amount of tries
+		for _ = 1, 10 do
+			local dir = mod.randomAngle()
+			local x = cx + FixedMul(cos(dir), dist)
+			local y = cy + FixedMul(sin(dir), dist)
+
+			local ss = R_PointInSubsectorOrNil(x, y)
+			if not (ss and ss.sector == sector) then continue end
+
+			local z = findItemFloorZOnSurface(x, y, radius, fof)
+
+			local x1, y1, z1 = x - radius, y - radius, z
+			local x2, y2, z2 = x + radius, y + radius, z + height
+
+			if not (
+				mod.doesAreaContainSolidGeometry(x1, y1, z1, x2, y2, z2)
+				or mod.doesAreaContainMobjs(x1, y1, z1, x2, y2, z2, p)
+			) then
+				return x, y, z
+			end
+		end
+	end
+
+	return nil, nil, nil
+end
+
+---@param x fixed_t
+---@param y fixed_t
 ---@param z fixed_t
 ---@param bestX fixed_t
 ---@param bestY fixed_t
@@ -33,11 +120,13 @@ end
 
 ---@param p player_t
 ---@param itemType itemapi.ItemType
+---@param adjusted? boolean Only use serverside or it will desync
 ---@return fixed_t?
 ---@return fixed_t?
 ---@return fixed_t?
-function mod.findItemPlacementPosition(p, itemType)
+function mod.findItemPlacementPosition(p, itemType, adjusted)
 	local bestX, bestY, bestZ
+	local bestFOF
 
 	local pmo = p.mo
 	local def = mod.itemDefs[itemType]
@@ -47,7 +136,9 @@ function mod.findItemPlacementPosition(p, itemType)
 	local playerZ = pmo.z + pmo.height * 2 / 3
 
 	local mt = def.mobjType
-	local mobjRadius = (mt and mobjinfo[mt].radius or def.mobjRadius or 32*FU)
+	local mobjScale = def.mobjScale or FU
+	local mobjRadius = FixedMul(mt and mobjinfo[mt].radius or def.mobjRadius or 32*FU, mobjScale)
+	local mobjHeight = FixedMul(mt and mobjinfo[mt].height or def.mobjHeight or 64*FU, mobjScale)
 
 	local minDist = pmo.radius + mobjRadius
 	local maxDist = pmo.radius * 4 + mobjRadius
@@ -61,29 +152,45 @@ function mod.findItemPlacementPosition(p, itemType)
 		if not subsector then return nil, nil, nil end
 		local sector = subsector.sector
 
+		local x1, y1 = x - mobjRadius, y - mobjRadius
+		local x2, y2 = x + mobjRadius, y + mobjRadius
+
 		local z = P_GetZAt(sector.f_slope, x, y, sector.floorheight)
 
-		if minZ <= z and maxZ >= z
-		and (bestX == nil or mod.isItemPlacementPositionBetter(x, y, z, bestX, bestY, bestZ, playerX, playerY, playerZ)) then
-			bestX, bestY, bestZ = x, y, z
+		if minZ <= z and maxZ >= z then
+			-- Calculate more accurately this time
+			z = findItemFloorZOnSurface(x, y, mobjRadius)
+
+			if minZ <= z and maxZ >= z
+			and (bestX == nil or mod.isItemPlacementPositionBetter(x, y, z, bestX, bestY, bestZ, playerX, playerY, playerZ))
+			and not mod.doesAreaContainSolidGeometry(x1, y1, z, x2, y2, z + mobjHeight)
+			then
+				bestX, bestY, bestZ = x, y, z
+				bestFOF = nil
+			end
 		end
 
 		for fof in sector.ffloors() do
 			local z = P_GetZAt(fof.t_slope, x, y, fof.topheight)
 
-			-- if minZ <= z and maxZ >= z
-			-- and fof.flags & FF_SOLID == FF_SOLID
-			-- and (bestX == nil or mod.isItemPlacementPositionBetter(x, y, z, bestX, bestY, bestZ, playerX, playerY, playerZ)) then
-			-- 	bestX, bestY, bestZ = x, y, z
-			-- end
-
 			if minZ <= z and maxZ >= z
-			and fof.flags & FF_SOLID == FF_SOLID then
-				if (bestX == nil or mod.isItemPlacementPositionBetter(x, y, z, bestX, bestY, bestZ, playerX, playerY, playerZ)) then
+			and fof.flags & FF_BLOCKOTHERS then
+				-- Calculate more accurately this time
+				z = findItemFloorZOnSurface(x, y, mobjRadius, fof)
+
+				if minZ <= z and maxZ >= z
+				and (bestX == nil or mod.isItemPlacementPositionBetter(x, y, z, bestX, bestY, bestZ, playerX, playerY, playerZ))
+				and not mod.doesAreaContainSolidGeometry(x1, y1, z, x2, y2, z + mobjHeight)
+				then
 					bestX, bestY, bestZ = x, y, z
+					bestFOF = fof
 				end
 			end
 		end
+	end
+
+	if adjusted and bestX ~= nil then
+		bestX, bestY, bestZ = adjustItemPlacementPosition(p, bestX, bestY, bestFOF, mobjRadius, mobjHeight)
 	end
 
 	return bestX, bestY, bestZ
@@ -98,7 +205,7 @@ function mod.placeItem(player, itemType, itemData)
 
 	local bestX, bestY, bestZ
 	if mod.itemDefs[itemType].carriable then
-		bestX, bestY, bestZ = mod.findItemPlacementPosition(player, itemType)
+		bestX, bestY, bestZ = mod.findItemPlacementPosition(player, itemType, true)
 	else
 		bestX, bestY, bestZ = mod.findLargeItemPlacementPosition(player, itemType)
 	end

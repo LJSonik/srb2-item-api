@@ -121,7 +121,7 @@ function mod.findLargeItemPlacementPosition(p, itemType)
 		local z = P_GetZAt(fof.t_slope, x, y, fof.topheight)
 
 		if minZ <= z and maxZ >= z
-		and fof.flags & FF_SOLID == FF_SOLID
+		and fof.flags & FF_BLOCKOTHERS
 		and (bestZ == nil or mod.isItemPlacementPositionBetter(x, y, z, x, y, bestZ, playerX, playerY, playerZ)) then
 			bestZ = z
 		end
