@@ -79,6 +79,21 @@ function mod.removeValueFromArray(array, element)
 	end
 end
 
+---@param value number
+---@param min number
+---@param max number
+function mod.minMax(value, min, max)
+	if value < min then
+		value = min
+	end
+
+	if value > max then
+		value = max
+	end
+
+	return value
+end
+
 ---@param t fixed_t
 ---@param min number
 ---@param max number
@@ -102,6 +117,11 @@ end
 ---@return fixed_t
 function mod.randomFixed(a, b)
 	return P_RandomRange(a / 256, b / 256) * 256
+end
+
+---@return angle_t
+function mod.randomAngle()
+	return P_RandomRange(-32768, 32767) * 65536
 end
 
 ---@param t any[]
