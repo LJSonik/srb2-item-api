@@ -62,3 +62,38 @@ function mod.doesAreaContainMobjs(x1, y1, z1, x2, y2, z2, player)
 
 	return not empty
 end
+
+---@param x1 fixed_t
+---@param y1 fixed_t
+---@param z1 fixed_t
+---@param x2 fixed_t
+---@param y2 fixed_t
+---@param z2 fixed_t
+---@return boolean
+function mod.doesAreaContainSolidGeometry(x1, y1, z1, x2, y2, z2)
+	for x = x1, x2, (x2 - x1) / 2 do
+		for y = y1, y2, (y2 - y1) / 2 do
+			local ss = R_PointInSubsectorOrNil(x, y)
+			if not ss then return true end
+
+			local s = ss.sector
+
+			if P_GetZAt(s.f_slope, x, y, s.floorheight) > z1
+			or P_GetZAt(s.c_slope, x, y, s.ceilingheight) < z2
+			then
+				return true
+			end
+
+			for fof in s.ffloors() do
+				if fof.flags & FF_BLOCKOTHERS
+				and P_GetZAt(fof.b_slope, x, y, fof.bottomheight) < z2
+				and P_GetZAt(fof.t_slope, x, y, fof.topheight) > z1
+				then
+					return true
+				end
+			end
+		end
+	end
+
+	return false
+end
