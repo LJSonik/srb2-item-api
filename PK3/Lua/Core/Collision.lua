@@ -44,7 +44,7 @@ function mod.doesAreaContainMobjs(x1, y1, z1, x2, y2, z2, player)
 	local empty = true
 
 	---@param mo mobj_t
-	searchBlockmap("objects", function(_, mo)
+	local function callback(_, mo)
 		local r = mo.radius
 
 		local mx = mo.x
@@ -58,7 +58,18 @@ function mod.doesAreaContainMobjs(x1, y1, z1, x2, y2, z2, player)
 
 		empty = false
 		return true
-	end, player.mo, x1, x2, y1, y2)
+	end
+
+	-- Done separately because searchBlockmap() skips the player
+	callback(player.mo, player.mo)
+
+	-- searchBlockmap() only detects object centers,
+	-- so extend the search area to avoid missing large objects
+	local maxRadius = 64*FU
+	searchBlockmap("objects", callback, player.mo,
+		x1 - maxRadius, x2 + maxRadius,
+		y1 - maxRadius, y2 + maxRadius
+	)
 
 	return not empty
 end
