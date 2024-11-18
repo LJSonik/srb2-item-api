@@ -84,6 +84,8 @@ for _, filename in ipairs{
 	"Interface/GUI/OptionsWindow.lua",
 	"Interface/GUI/ControlOptionsWindow.lua",
 	"Interface/GUI/Navigation.lua",
+
+	"Debug.lua",
 } do
 	dofile(filename)
 end

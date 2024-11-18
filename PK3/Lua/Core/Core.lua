@@ -183,16 +183,6 @@ addHook("PlayerSpawn", function(p)
 			mod.spawnCarriedItemMobj(p)
 		end
 	end
-
-	-- !!!! DBG
-	-- p.itemapi_inventory:add("bush_seed", 10)
-	-- p.itemapi_hunger = mod.MAX_HUNGER * 34/100
-	-- local fire = mod.placeItem(p, "campfire")
-	-- mod.campfire_addItemToSpit(fire, "raw_meat")
-	-- mod.carryItem(p, "chest")
-	-- mod.setUIMode("large_item_placement", "campfire")
-	-- P_SetOrigin(p.mo, -3026*FU, -5666*FU, 48*FU)
-	-- p.mo.angle = ANGLE_180
 end)
 
 ---@param p player_t
