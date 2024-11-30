@@ -112,6 +112,10 @@ function mod.sinCycle(time, low, high, speed)
 	return low + FixedMul(base + FU, (high - low) / 2)
 end
 
+function mod.pointToDist3D(x1, y1, z1, x2, y2, z2)
+	return R_PointToDist2(0, z1, R_PointToDist2(x1, y1, x2, y2), z2)
+end
+
 ---@param a fixed_t
 ---@param b fixed_t
 ---@return fixed_t
