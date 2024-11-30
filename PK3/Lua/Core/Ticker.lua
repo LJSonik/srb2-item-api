@@ -8,7 +8,8 @@ mod.vars.mobjTickers_mobj = {}
 ---@type integer[][]
 mod.vars.mobjTickers_callbackID = {}
 
-local initialised = false
+---@type boolean
+mod.vars.tickersInitialised = false
 
 ---@type fun(mobj: mobj_t, deltaTime: tic_t)[][]?
 local mobjTickers_callback = nil
@@ -30,7 +31,7 @@ end
 ---@param callback fun(mobj: mobj_t)
 ---@param frequency tic_t
 function mod.startMobjTicker(mobj, callback, frequency)
-	if not initialised then
+	if not mod.vars.tickersInitialised then
 		mod.initialiseTickers()
 	end
 
@@ -92,25 +93,25 @@ function mod.updateTickers()
 end
 
 function mod.initialiseTickers()
-	if initialised then return end
+	if mod.vars.tickersInitialised then return end
 
 	for freq = 1, TICRATE do
 		mod.vars.mobjTickers_mobj[freq] = {}
 		mod.vars.mobjTickers_callbackID[freq] = {}
 	end
 
-	initialised = true
+	mod.vars.tickersInitialised = true
 end
 
 function mod.uninitialiseTickers()
-	if not initialised then return end
+	if not mod.vars.tickersInitialised then return end
 
 	mod.vars.mobjTickers_mobj = {}
 	mod.vars.mobjTickers_callbackID = {}
 
 	mod.uninitialiseClientTickers()
 
-	initialised = false
+	mod.vars.tickersInitialised = false
 end
 
 function mod.uninitialiseClientTickers()
