@@ -65,6 +65,28 @@ function mod.getGroundItemSpotPosition(mobj, spotIndex)
 		mobj.z + relZ
 end
 
+---@param mobj mobj_t
+---@param x fixed_t
+---@param y fixed_t
+---@param z fixed_t
+---@return integer?
+function mod.findClosestGroundItemSpotIndex(mobj, x, y, z)
+	local itemDef = mod.getItemDefFromMobj(mobj)
+	local spotDefs = itemDef.spots
+
+	local bestSpotIndex, bestDist = nil, INT32_MAX
+
+	for i = 1, #spotDefs do
+		local spotX, spotY, spotZ = mod.getGroundItemSpotPosition(mobj, i)
+		local dist = mod.pointToDist3D(x, y, z, spotX, spotY, spotZ)
+		if dist < bestDist then
+			bestSpotIndex, bestDist = i, dist
+		end
+	end
+
+	return bestSpotIndex
+end
+
 ---@param def itemapi.ItemDef
 function mod.addGroundItem(def)
 	local mt = def.mobjType
