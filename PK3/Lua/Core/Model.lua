@@ -83,6 +83,10 @@ local function spawnPartsFromDefCache(cache, solid)
 		mo.sprite, mo.frame = partDef.sprite, partDef.frame
 		mo.spriteyoffset = -4*FU -- Hack to work around OpenGL rendering with an extra 4 FU y-offset
 
+		if partDef.flip then
+			mo.renderflags = $ | RF_HORIZONTALFLIP
+		end
+
 		if partType == "paper" then
 			mo.renderflags = $ | RF_PAPERSPRITE
 

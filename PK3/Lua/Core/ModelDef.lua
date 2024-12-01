@@ -13,6 +13,8 @@ local mod = itemapi
 ---@field angle integer
 ---@field vangle integer
 ---
+---@field flip boolean
+---
 ---@field sx fixed_t
 ---@field sy fixed_t
 ---
@@ -98,6 +100,8 @@ local function cacheModelPartDef(cache, part, translationX, translationY, transl
 	local angle = FixedAngle(part.angle * FU) + rotation
 
 	cachePart.sprite, cachePart.frame = sprite, frame
+
+	cachePart.flip = part.flip
 
 	if part.sx ~= nil then
 		cachePart.sx = FixedMul(part.sx, scale)
