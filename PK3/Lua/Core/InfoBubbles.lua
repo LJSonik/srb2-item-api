@@ -57,7 +57,7 @@ local function spawnTextMobjs(bubble, x, y, z)
 			local textMobj = P_SpawnMobj(x, y, z, MT_ITEMAPI_INFOBUBBLE)
 			bubble.textMobjs[i] = textMobj
 
-			local spriteFrame = fontDef.characters[c] or fontDef.characters[c]
+			local spriteFrame = fontDef.characters[c] or fontDef.characters[" "]
 			textMobj.sprite, textMobj.frame = spriteFrame[1], spriteFrame[2]
 
 			textMobj.spritexscale, textMobj.spriteyscale = SCALE, SCALE
