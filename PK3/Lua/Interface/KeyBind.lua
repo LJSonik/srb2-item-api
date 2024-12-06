@@ -175,12 +175,16 @@ end
 ---@return boolean
 local function isKeyUsable(keyName)
 	local modeDef = mod.uiModeDefs[mod.client.uiModeType]
-	for _, def in ipairs(modeDef.commands) do
+	for _, modalDef in ipairs(modeDef.commands) do
+		local def = modalDef
 		if not def.modal then
 			def = mod.uiCommandDefs[def.id]
 		end
 
-		if mod.isKeyBoundToUICommand(keyName, def.id) then return true end
+		if not (modalDef.condition and not modalDef.condition())
+		and mod.isKeyBoundToUICommand(keyName, def.id) then
+			return true
+		end
 	end
 
 	-- for _, def in ipairs(mod.uiCommandDefs) do

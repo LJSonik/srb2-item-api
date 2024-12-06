@@ -8,6 +8,7 @@ local gui = ljrequire "ljgui"
 ---@class itemapi.UICommandDef
 ---@field id string
 ---@field index integer
+---@field name string
 ---@field modal boolean
 ---@field action fun()
 ---
@@ -17,6 +18,7 @@ local gui = ljrequire "ljgui"
 ---@field defaultKeyIsGameControl boolean
 ---@field defaultKey string|integer
 ---@field defaultInputType "short"|"long"
+---@field showOnRight boolean
 
 ---@alias itemapi.UIModeType
 ---| "game"
@@ -30,6 +32,7 @@ local gui = ljrequire "ljgui"
 ---@field index integer
 ---
 ---@field commands itemapi.UICommandDef[]
+---@field showCommands boolean
 ---@field allowMovement boolean
 ---@field useMouse boolean
 ---
@@ -116,9 +119,58 @@ function mod.uninitialiseInterface()
 	mod.closeUI()
 end
 
+---@param v videolib
+---@param name string
+---@param cmdID string
+---@param x integer
+---@param y integer
+---@param rightAligned? boolean
+local function drawActionKey(v, name, cmdID, x, y, rightAligned)
+	local keyName = mod.getUICommandKeyName(cmdID):upper()
+	local keyBlinkFreq = TICRATE/2
+	local keyColor = (mod.client.time / keyBlinkFreq % 2 == 0) and "\x80" or "\x8f"
+
+	v.drawString(
+		x, y,
+		keyColor .. keyName .. " \x84" .. name .. "\x80",
+		V_ALLOWLOWERCASE | (rightAligned and V_SNAPTORIGHT or V_SNAPTOLEFT) | V_SNAPTOBOTTOM,
+		rightAligned and "right" or "left"
+	)
+end
+
+---@param v videolib
+function mod.drawAvailableCommands(v)
+	local def = mod.uiModeDefs[mod.client.uiModeType]
+
+	local leftY = 162
+	local rightY = 162
+
+	for _, cmdDef in ipairs(def.commands) do
+		if cmdDef.condition and not cmdDef.condition() then continue end
+
+		local name = cmdDef.modal and cmdDef.name or mod.uiCommandDefs[cmdDef.id].name
+		if type(name) == "function" then
+			name = name()
+		end
+
+		if cmdDef.showOnRight then
+			drawActionKey(v, name, cmdDef.id, 304, rightY, true)
+			rightY = rightY - 12
+		else
+			drawActionKey(v, name, cmdDef.id, 16, leftY)
+			leftY = leftY - 12
+		end
+	end
+end
+
 
 hud.add(function(v)
 	local def = mod.uiModeDefs[mod.client.uiModeType]
+
+	if def.showCommands then
+		mod.drawAvailableCommands(v)
+	end
+
 	if def.draw then
 		def.draw(v)
 	end

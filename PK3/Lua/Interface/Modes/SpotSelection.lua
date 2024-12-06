@@ -3,6 +3,8 @@ local mod = itemapi
 
 
 mod.addUIMode("spot_selection", {
+	showCommands = true,
+
 	---@param availableActionIndex integer
 	enter = function(availableActionIndex)
 		local mode = mod.client.uiMode
@@ -70,6 +72,7 @@ mod.addUIMode("spot_selection", {
 		},
 		{
 			id = "cancel",
+			showOnRight = true,
 
 			action = function()
 				mod.closeUI()

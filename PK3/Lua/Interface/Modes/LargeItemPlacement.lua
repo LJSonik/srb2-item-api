@@ -25,27 +25,8 @@ local netCommand_craftAndPlaceItem = nc.add(function (p, stream)
 end)
 
 
----@param v videolib
----@param name string
----@param cmdID string
----@param x integer
----@param y integer
----@param rightAligned? boolean
-local function drawActionKey(v, name, cmdID, x, y, rightAligned)
-	local keyName = mod.getUICommandKeyName(cmdID):upper()
-	local keyBlinkFreq = TICRATE/2
-	local keyColor = (mod.client.time / keyBlinkFreq % 2 == 0) and "\x80" or "\x8f"
-
-	v.drawString(
-		x, y,
-		keyColor .. keyName .. " \x84" .. name .. "\x80",
-		V_ALLOWLOWERCASE | (rightAligned and V_SNAPTORIGHT or V_SNAPTOLEFT) | V_SNAPTOBOTTOM,
-		rightAligned and "right" or "left"
-	)
-end
-
-
 mod.addUIMode("large_item_placement", {
+	showCommands = true,
 	allowMovement = true,
 
 	enter = function(recipeType)
@@ -115,16 +96,11 @@ mod.addUIMode("large_item_placement", {
 		},
 		{
 			id = "cancel",
+			showOnRight = true,
 
 			action = function()
 				mod.closeUI()
 			end
 		},
 	},
-
-	---@param v videolib
-	draw = function(v)
-		drawActionKey(v, "cancel", "cancel", 304, 162, true)
-		drawActionKey(v, "place", "confirm", 304, 150, true)
-	end,
 })

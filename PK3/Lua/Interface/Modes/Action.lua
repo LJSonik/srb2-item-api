@@ -212,27 +212,33 @@ function mod.sendNetCommand_carryMobj()
 	mod.closeActionSelection()
 end
 
----@param v videolib
----@param name string
----@param cmdID string
----@param x integer
----@param y integer
----@param rightAligned? boolean
-local function drawActionKey(v, name, cmdID, x, y, rightAligned)
-	local keyName = mod.getUICommandKeyName(cmdID):upper()
-	local keyBlinkFreq = TICRATE/2
-	local keyColor = (mod.client.time / keyBlinkFreq % 2 == 0) and "\x80" or "\x8f"
+---@param actionIndex integer
+local function performAction(actionIndex)
+	if not checkSelectionValidity() then return end
 
-	v.drawString(
-		x, y,
-		keyColor .. keyName .. " \x84" .. name .. "\x80",
-		V_ALLOWLOWERCASE | (rightAligned and V_SNAPTORIGHT or V_SNAPTOLEFT) | V_SNAPTOBOTTOM,
-		rightAligned and "right" or "left"
-	)
+	local sel = mod.client.actionSelection
+
+	local availableAction = sel.availableActions[actionIndex]
+	if not availableAction then return end
+
+	if availableAction.type == "ground_item" then
+		local actionDef = mod.getActionDefFromMobj(sel.mobj, availableAction.index)
+
+		if actionDef.selectSpot then
+			mod.client.uiMode.selectingSpot = true
+			mod.setUIMode("spot_selection", actionIndex)
+		else
+			mod.sendActionNetCommand(actionIndex)
+		end
+	else
+		mod.sendActionNetCommand(actionIndex)
+	end
 end
 
 
 mod.addUIMode("action_selection", {
+	showCommands = true,
+
 	enter = function(availableActions, mobj)
 		local cl = mod.client
 
@@ -259,35 +265,68 @@ mod.addUIMode("action_selection", {
 	commands = {
 		{
 			id = "perform_action1",
-			name = "perform action 1",
 			defaultKey = "@custom1",
 
+			name = function()
+				return mod.client.actionSelection.availableActions[1].def.name
+			end,
+			condition = function()
+				return mod.client.actionSelection.availableActions[1]
+			end,
 			action = function()
-				if not checkSelectionValidity() then return end
+				performAction(1)
+			end
+		},
+		{
+			id = "perform_action2",
+			defaultKey = "@custom2",
 
-				local sel = mod.client.actionSelection
+			name = function()
+				return mod.client.actionSelection.availableActions[2].def.name
+			end,
+			condition = function()
+				return mod.client.actionSelection.availableActions[2]
+			end,
+			action = function()
+				performAction(2)
+			end
+		},
+		{
+			id = "perform_action3",
+			defaultKey = "@custom3",
 
-				local availableAction = sel.availableActions[1]
-				if not availableAction then return end
-
-				if availableAction.type == "ground_item" then
-					local actionDef = mod.getActionDefFromMobj(sel.mobj, availableAction.index)
-
-					if actionDef.selectSpot then
-						mod.client.uiMode.selectingSpot = true
-						mod.setUIMode("spot_selection", 1)
-					else
-						mod.sendActionNetCommand(1)
-					end
-				else
-					mod.sendActionNetCommand(1)
-				end
+			name = function()
+				return mod.client.actionSelection.availableActions[3].def.name
+			end,
+			condition = function()
+				return mod.client.actionSelection.availableActions[3]
+			end,
+			action = function()
+				performAction(3)
 			end
 		},
 		{
 			id = "carry_or_store",
-			name = "carry or store",
 			defaultKey = "@forward",
+			showOnRight = true,
+
+			name = function()
+				return mod.getMainCarriedItemType(consoleplayer) and "store" or "carry"
+			end,
+
+			condition = function()
+				local itemType = mod.getMainCarriedItemType(consoleplayer)
+
+				if itemType then
+					local def = mod.itemDefs[itemType]
+					return (def and def.storable ~= false)
+				else
+					local sel = mod.client.actionSelection
+					if not (sel.mobj and sel.mobj.valid) then return false end
+					local def = mod.getItemDefFromMobj(sel.mobj)
+					return (def and def.carriable ~= false)
+				end
+			end,
 
 			action = function()
 				if not checkSelectionValidity() then return end
@@ -309,8 +348,19 @@ mod.addUIMode("action_selection", {
 		},
 		{
 			id = "place",
-			name = "place item on ground",
+			name = "place",
 			defaultKey = "@backward",
+			showOnRight = true,
+
+			condition = function()
+				local itemType = mod.getMainCarriedItemType(consoleplayer)
+				if itemType then
+					local def = mod.itemDefs[itemType]
+					return (def and def.placeable ~= false)
+				else
+					return false
+				end
+			end,
 
 			action = function()
 				if not checkSelectionValidity() then return end
@@ -322,34 +372,11 @@ mod.addUIMode("action_selection", {
 		},
 		{
 			id = "cancel",
+			showOnRight = true,
 
 			action = function()
 				mod.closeUI()
 			end
 		},
 	},
-
-	---@param v videolib
-	draw = function(v)
-		local sel = mod.client.actionSelection
-
-		local y = 162
-		for _, action in ipairs(sel.availableActions) do
-			local actionDef = action.def
-			drawActionKey(v, actionDef.name, "perform_action1", 16, y)
-			y = y - 12
-		end
-
-		drawActionKey(v, "cancel", "cancel", 304, 162, true)
-
-		if mod.getMainCarriedItemType(consoleplayer) then
-			drawActionKey(v, "place", "place", 304, 150, true)
-			drawActionKey(v, "store", "carry_or_store", 304, 138, true)
-		elseif sel.mobj and sel.mobj.valid then
-			local def = mod.getItemDefFromMobj(sel.mobj)
-			if def and def.carriable then
-				drawActionKey(v, "carry", "carry_or_store", 304, 150, true)
-			end
-		end
-	end,
 })
