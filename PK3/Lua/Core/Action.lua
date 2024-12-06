@@ -13,13 +13,11 @@ local mod = itemapi
 ---@field animation3? itemapi.ActionAnimationDef
 
 ---@class itemapi.ItemActionDef : itemapi.ActionDef
----@field name string
 ---@field requiredGroundItem? string
 ---@field condition? fun(): boolean
 ---@field action fun(player: player_t)
 
 ---@class itemapi.GroundItemActionDef : itemapi.ActionDef
----@field name string
 ---@field requiredCarriedItem? string
 ---@field condition? fun(): boolean
 ---@field selectSpot? boolean
@@ -28,7 +26,6 @@ local mod = itemapi
 ---@class itemapi.MobjActionDef : itemapi.ActionDef
 ---@field mobjType mobjtype_t
 ---@field state? statenum_t
----@field name string
 ---@field action fun(player: player_t, mobj: mobj_t)
 
 ---@class itemapi.Action
