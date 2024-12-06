@@ -17,7 +17,7 @@ function mod.getDefaultLargeItemPlacementPosition(p, itemType)
 	local pmo = p.mo
 
 	local dir = mod.snapAngleToCardinalDirection(pmo.angle)
-	local dist = pmo.radius
+	local dist = pmo.radius + FU
 
 	local mobjRadius = (mt and mobjinfo[mt].radius or def.mobjRadius or 32*FU)
 	local dim = def.dimensions
