@@ -212,13 +212,31 @@ function mod.sendNetCommand_carryMobj()
 	mod.closeActionSelection()
 end
 
----@param actionIndex integer
-local function performAction(actionIndex)
+---@param availableActionIndex integer
+---@return boolean
+local function checkActionCondition(availableActionIndex)
+	local sel = mod.client.actionSelection
+
+	local availableAction = sel.availableActions[availableActionIndex]
+	if not availableAction then return false end
+
+	if availableAction.type == "ground_item" then
+		local actionDef = mod.getActionDefFromMobj(sel.mobj, availableAction.index)
+		if actionDef.condition then
+			return actionDef.condition(consoleplayer, sel.mobj)
+		end
+	end
+
+	return true
+end
+
+---@param availableActionIndex integer
+local function performAction(availableActionIndex)
 	if not checkSelectionValidity() then return end
 
 	local sel = mod.client.actionSelection
 
-	local availableAction = sel.availableActions[actionIndex]
+	local availableAction = sel.availableActions[availableActionIndex]
 	if not availableAction then return end
 
 	if availableAction.type == "ground_item" then
@@ -226,12 +244,12 @@ local function performAction(actionIndex)
 
 		if actionDef.selectSpot then
 			mod.client.uiMode.selectingSpot = true
-			mod.setUIMode("spot_selection", actionIndex)
+			mod.setUIMode("spot_selection", availableActionIndex)
 		else
-			mod.sendActionNetCommand(actionIndex)
+			mod.sendActionNetCommand(availableActionIndex)
 		end
 	else
-		mod.sendActionNetCommand(actionIndex)
+		mod.sendActionNetCommand(availableActionIndex)
 	end
 end
 
@@ -271,7 +289,7 @@ mod.addUIMode("action_selection", {
 				return mod.client.actionSelection.availableActions[1].def.name
 			end,
 			condition = function()
-				return mod.client.actionSelection.availableActions[1]
+				return checkActionCondition(1)
 			end,
 			action = function()
 				performAction(1)
@@ -285,7 +303,7 @@ mod.addUIMode("action_selection", {
 				return mod.client.actionSelection.availableActions[2].def.name
 			end,
 			condition = function()
-				return mod.client.actionSelection.availableActions[2]
+				return checkActionCondition(2)
 			end,
 			action = function()
 				performAction(2)
@@ -299,7 +317,7 @@ mod.addUIMode("action_selection", {
 				return mod.client.actionSelection.availableActions[3].def.name
 			end,
 			condition = function()
-				return mod.client.actionSelection.availableActions[3]
+				return checkActionCondition(3)
 			end,
 			action = function()
 				performAction(3)

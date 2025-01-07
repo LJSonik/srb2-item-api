@@ -19,7 +19,7 @@ local mod = itemapi
 
 ---@class itemapi.GroundItemActionDef : itemapi.ActionDef
 ---@field requiredCarriedItem? string
----@field condition? fun(): boolean
+---@field condition? fun(player: player_t, mobj: mobj_t): boolean
 ---@field selectSpot? boolean
 ---@field action fun(player: player_t, mobj: mobj_t, groundItemDef: itemapi.ItemDef, carriedItemDef: itemapi.ItemDef?, spotIndex: integer?)
 
@@ -147,7 +147,8 @@ function mod.findAvailableActions(player, mobj)
 
 			for i, actionDef in ipairs(groundItemDef.groundActions) do
 				local carriedItemID = carriedItemDef and carriedItemDef.id
-				if actionDef.requiredCarriedItem and not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem) then
+				if actionDef.requiredCarriedItem and not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem)
+				or actionDef.condition and not actionDef.condition(player, mobj) then
 					continue
 				end
 
@@ -304,6 +305,8 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 
 	local requiredID = actionDef.requiredCarriedItem
 	if requiredID and not mod.doesItemMatchSelector(carriedItemID, requiredID) then return end
+
+	if actionDef.condition and not actionDef.condition(player, groundItem) then return end
 
 	if player.itemapi_action then
 		mod.stopAction(player)
