@@ -347,7 +347,7 @@ function bs.writeString(stream, s)
 		writeByte(stream, #s)
 	else
 		writeByte(stream, 255)
-		writeInt32(stream, #s)
+		bs.writeInt32(stream, #s)
 	end
 
 	bs.writeBytes(stream, bs.stringToBytes(s))
