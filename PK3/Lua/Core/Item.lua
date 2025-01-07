@@ -213,7 +213,9 @@ function mod.doesItemMatchSelector(itemID, selector)
 
 	itemID = itemDef.id
 
-	if selector:sub(1, 6) == "group:" then
+	if selector == "any" then
+		return true
+	elseif selector:sub(1, 6) == "group:" then
 		local groupID = selector:sub(7)
 		return (itemDef.groups[groupID])
 	else
