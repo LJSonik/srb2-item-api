@@ -99,7 +99,11 @@ function mod.addGroundItem(def)
 		mt = MT_ITEMAPI_GROUNDITEM
 		def.mobjType = mt
 		def.mobjState = _G[stateName]
+		if def.model then
+			states[def.mobjState] = { SPR_NULL }
+		else
 		states[def.mobjState] = { def.mobjSprite, def.mobjFrame }
+		end
 	end
 
 	if mod.mobjToItemType[mt] and mod.mobjToItemType[mt][def.mobjState or S_NULL] then
