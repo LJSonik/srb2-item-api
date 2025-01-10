@@ -28,9 +28,14 @@ local mod = itemapi
 ---@field state? statenum_t
 ---@field action fun(player: player_t, mobj: mobj_t)
 
+---@alias itemapi.ActionType "carried_item"|"ground_item"|"mobj"
+
 ---@class itemapi.Action
----@field type "carried_item"|"ground_item"|"mobj"
----@field target? mobj_t
+---@field arrayIndex integer
+---@field despawning? boolean
+---@field type itemapi.ActionType
+---@field actors player_t[]
+---@field target? any
 ---@field index integer
 ---@field spotIndex? integer
 ---@field progress tic_t
@@ -46,15 +51,17 @@ local MAX_ACTION_HEIGHT = 96*FU
 ---@type { [mobjtype_t]: { [statenum_t]: itemapi.MobjActionDef } }
 mod.mobjActionDefs = {}
 
+---@class itemapi.Vars
+---@field actions itemapi.Action[]
+mod.vars.actions = {}
 
----@param player player_t
+---@param action itemapi.Action
 ---@return itemapi.ActionDef?
-function mod.getActionDefFromPlayer(player)
-	local action = player.itemapi_action
+function mod.getActionDef(action)
 	local actionType = action.type
 
 	if actionType == "carried_item" then
-		local itemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
+		local itemDef = mod.itemDefs[mod.getMainCarriedItemType(action.target)]
 		return itemDef and itemDef.actions[action.index]
 	elseif actionType == "ground_item" then
 		local mobj = action.target
@@ -106,6 +113,77 @@ function mod.addMobjAction(mobjType, def)
 	-- Required to ensure the mobjs are synced in servers
 	-- and can be detected when searching for nearby objects
 	mobjinfo[mobjType].flags = $ & ~(MF_NOTHINK | MF_NOBLOCKMAP)
+end
+
+---@param actionType itemapi.ActionType
+---@return itemapi.Action
+function mod.spawnAction(actionType)
+	local index = #mod.vars.actions + 1
+
+	local action = {
+		arrayIndex = index,
+		type = actionType,
+		actors = {},
+		progress = 0
+	}
+
+	mod.vars.actions[index] = action
+
+	return action
+end
+
+function mod.updateActions()
+	local actions = mod.vars.actions
+
+	for i = #actions, 1, -1 do
+		local action = actions[i]
+
+		for i = #action.actors, 1, -1 do
+			local actor = action.actors[i]
+
+			if not mod.canPlayerContinueAction(actor) then
+				mod.stopAction(actor)
+				continue
+			end
+
+			action.progress = $ + 1
+		end
+
+		local actionDef = mod.getActionDef(action)
+
+		mod.updateActionAnimation(action)
+
+		if action.progress >= actionDef.duration then
+			local actor = mod.randomElement(action.actors)
+
+			if action.type == "carried_item" then
+				actionDef.action(actor, action.groundItem)
+			elseif action.type == "ground_item" then
+				local groundItemDef = mod.getItemDefFromMobj(action.target)
+				local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
+				actionDef.action(actor, action.target, groundItemDef, carriedItemDef)
+			elseif action.type == "mobj" then
+				actionDef.action(actor, action.target)
+			end
+
+			for i = #action.actors, 1, -1 do
+				mod.stopAction(action.actors[i])
+			end
+		end
+	end
+end
+
+---@param action itemapi.Action
+function mod.despawnAction(action)
+	if action.despawning then return end
+	action.despawning = true
+
+	for i = #action.actors, 1, -1 do
+		mod.stopAction(action.actors[i])
+	end
+
+	mod.stopActionAnimation(action)
+	mod.removeIndexFromUnorderedArrayAndUpdateField(mod.vars.actions, action.arrayIndex, "arrayIndex")
 end
 
 ---@param player player_t
@@ -274,14 +352,15 @@ function mod.performCarriedItemAction(player, index, groundItem)
 	end
 
 	if actionDef.duration ~= nil then
-		player.itemapi_action = {
-			type = "carried_item",
-			index = index,
-			groundItem = groundItem,
-			progress = 0
-		}
+		local action = mod.spawnAction("carried_item")
+		action.target = player
+		action.index = index
+		action.groundItem = groundItem
 
-		mod.startPlayerActionAnimation(player)
+		table.insert(action.actors, player)
+		player.itemapi_action = action
+
+		mod.startActionAnimation(action)
 	else
 		actionDef.action(player, groundItem)
 	end
@@ -308,20 +387,28 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 
 	if actionDef.condition and not actionDef.condition(player, groundItem) then return end
 
+	local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", groundItem)
+
+	-- Ground item already in use but with a different action?
+	if action and not (action.index == actionIndex and action.spotIndex == spotIndex) then return end
+
 	if player.itemapi_action then
 		mod.stopAction(player)
 	end
 
 	if actionDef.duration ~= nil then
-		player.itemapi_action = {
-			type = "ground_item",
-			target = groundItem,
-			index = actionIndex,
-			spotIndex = spotIndex,
-			progress = 0
-		}
+		-- Spawn a new action if one didn't exist for this ground item yet
+		if not action then
+			action = mod.spawnAction("ground_item")
+			action.target = groundItem
+			action.index = actionIndex
+			action.spotIndex = spotIndex
+		end
 
-		mod.startPlayerActionAnimation(player)
+		table.insert(action.actors, player)
+		player.itemapi_action = action
+
+		mod.startActionAnimation(action)
 	else
 		actionDef.action(player, groundItem, groundItemDef, carriedItemDef, spotIndex)
 	end
@@ -337,75 +424,38 @@ function mod.performMobjAction(player, index, mobj)
 	local actionDef = actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
 	if not actionDef then return end
 
+	local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", mobj)
+
 	if player.itemapi_action then
 		mod.stopAction(player)
 	end
 
 	if actionDef.duration ~= nil then
-		player.itemapi_action = {
-			type = "mobj",
-			target = mobj,
-			progress = 0
-		}
+		-- Spawn a new action if one didn't exist for this ground item yet
+		if not action then
+			action = mod.spawnAction("mobj")
+			action.target = mobj
+		end
 
-		mod.startPlayerActionAnimation(player)
+		table.insert(action.actors, player)
+		player.itemapi_action = action
+
+		mod.startActionAnimation(action)
 	else
 		actionDef.action(player, mobj)
 	end
 end
 
 ---@param player player_t
-function mod.updateAction(player)
+function mod.stopAction(player)
 	local action = player.itemapi_action
 
-	if not mod.canPlayerContinueAction(player) then
-		mod.stopAction(player)
-		return
-	end
-
-	action.progress = $ + 1
-
-	if action.type == "carried_item" then
-		local itemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
-		local actionDef = itemDef.actions[action.index]
-
-		mod.updatePlayerActionAnimation(player)
-
-		if action.progress >= actionDef.duration then
-			actionDef.action(player, action.groundItem)
-			mod.stopAction(player)
-		end
-	elseif action.type == "ground_item" then
-		local groundItemDef = mod.getItemDefFromMobj(action.target)
-		local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
-		local actionDef = groundItemDef.groundActions[action.index]
-
-		mod.updatePlayerActionAnimation(player)
-
-		if action.progress >= actionDef.duration then
-			actionDef.action(player, action.target, groundItemDef, carriedItemDef)
-			mod.stopAction(player)
-		end
-	elseif action.type == "mobj" then
-		local mobj = action.target
-		local actionDefs = mod.mobjActionDefs[mobj.type]
-		local actionDef = actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
-
-		mod.updatePlayerActionAnimation(player)
-
-		if action.progress >= actionDef.duration then
-			actionDef.action(player, action.target)
-			mod.stopAction(player)
-		end
-	end
-end
-
----@param player player_t
-function mod.stopAction(player)
-	if not player.itemapi_action then return end
-
-	mod.stopPlayerActionAnimation(player)
+	mod.removeValueFromArray(action.actors, player)
 	player.itemapi_action = nil
+
+	if #action.actors == 0 then
+		mod.despawnAction(action)
+	end
 end
 
 ---@param player player_t

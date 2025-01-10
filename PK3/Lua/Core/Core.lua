@@ -139,12 +139,11 @@ addHook("ThinkFrame", function()
 
 	for p in players.iterate do
 		mod.updateCarriedItems(p)
-		if p.itemapi_action then
-			mod.updateAction(p)
-		end
 		mod.updateHunger(p)
 		mod.updateInfoBubbles(p)
 	end
+
+	mod.updateActions()
 
 	mod.updateTickers()
 	mod.updateModels()
