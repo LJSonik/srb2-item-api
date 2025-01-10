@@ -32,6 +32,10 @@ function mod.merge(t1, t2)
 	return dst
 end
 
+---@generic T, F
+---@param array T[]
+---@param cond fun(T) : F
+---@return F[]
 function mod.filter(array, cond)
 	local filteredArray = {}
 
