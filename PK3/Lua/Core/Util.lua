@@ -67,6 +67,21 @@ function mod.findInArray(array, element)
 		end
 	end
 end
+
+---@generic T
+---@param array T[]
+---@param fieldName string
+---@param fieldValue any
+---@return T?
+function mod.findElementInArrayByFieldValue(array, fieldName, fieldValue)
+	for i = 1, #array do
+		local elem = array[i]
+		if elem[fieldName] == fieldValue then
+			return elem
+		end
+	end
+end
+
 ---@generic T
 ---@param array T[]
 ---@param index integer
