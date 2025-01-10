@@ -14,6 +14,7 @@ mod.craftingRecipeDefs = {}
 ---@field index integer
 ---
 ---@field item string ID of the resulting item
+---@field location? string Required location (e.g. handcrafted or workbench)
 ---
 ---Example:
 ---```lua

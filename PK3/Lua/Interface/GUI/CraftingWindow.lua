@@ -79,6 +79,8 @@ function CraftingWindow:__init(props)
 
 	local index = 1
 	for _, recipe in ipairs(mod.craftingRecipeDefs) do
+		if self.location ~= recipe.location then continue end
+
 		local itemDef = mod.itemDefs[recipe.item]
 
 		local button = gui.Button {
