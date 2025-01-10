@@ -67,6 +67,27 @@ function mod.findInArray(array, element)
 		end
 	end
 end
+---@generic T
+---@param array T[]
+---@param index integer
+function mod.removeIndexFromUnorderedArray(array, index)
+	local lastIndex = #array
+	array[index] = array[lastIndex]
+	array[lastIndex] = nil
+end
+
+---@generic T
+---@param array T[]
+---@param index integer
+function mod.removeIndexFromUnorderedArrayAndUpdateField(array, index, fieldName)
+	local lastIndex = #array
+	array[index] = array[lastIndex]
+	array[lastIndex] = nil
+
+	if array[index] then
+		array[index][fieldName] = index
+	end
+end
 
 ---@generic T
 ---@param array T[]
@@ -75,6 +96,21 @@ function mod.removeValueFromArray(array, element)
 	for i = #array, 1, -1 do
 		if array[i] == element then
 			table.remove(array, i)
+		end
+	end
+end
+
+---@generic T
+---@param array T[]
+---@param element T
+function mod.removeValueFromUnorderedArray(array, element)
+	local lastIndex = #array
+
+	for i = lastIndex, 1, -1 do
+		if array[i] == element then
+			array[i] = array[lastIndex]
+			array[lastIndex] = nil
+			lastIndex = lastIndex - 1
 		end
 	end
 end
