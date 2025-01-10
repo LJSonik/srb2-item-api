@@ -102,7 +102,7 @@ function mod.addGroundItem(def)
 		if def.model then
 			states[def.mobjState] = { SPR_NULL }
 		else
-		states[def.mobjState] = { def.mobjSprite, def.mobjFrame }
+			states[def.mobjState] = { def.mobjSprite, def.mobjFrame }
 		end
 	end
 
