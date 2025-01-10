@@ -154,6 +154,23 @@ function mod.spawnGroundItem(x, y, z, id)
 	return mo
 end
 
+---@param mobj mobj_t
+---@param itemType itemapi.ItemType
+function mod.applyGroundItemAppearanceToMobj(mobj, itemType)
+	local def = itemapi.itemDefs[itemType]
+
+	if def.model then
+		mobj.itemapi_model = itemapi.spawnModelOnMobj(mobj, def.model)
+		local scale = FixedMul(def.modelScale or FU, mobj.scale)
+		itemapi.setModelTransform(mobj.itemapi_model, mobj.x, mobj.y, mobj.z, mobj.angle, scale)
+
+		mobj.sprite = SPR_NULL
+	else
+		mobj.sprite = def.mobjSprite
+		mobj.frame = def.mobjFrame
+	end
+end
+
 function mod.groundItemRemovedHook(mo)
 	if not (mo and mo.valid) then return end
 
