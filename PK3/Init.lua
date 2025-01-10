@@ -75,6 +75,7 @@ for _, filename in ipairs{
 	"Interface/Modes/LargeItemPlacement.lua",
 	"Interface/Modes/Container.lua",
 	"Interface/Modes/SpotSelection.lua",
+	"Interface/Modes/CraftingRecipeSelection.lua",
 
 	"Interface/GUI/Menu.lua",
 	"Interface/GUI/MenuList.lua",
