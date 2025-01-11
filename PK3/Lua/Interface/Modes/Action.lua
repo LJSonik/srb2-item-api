@@ -93,8 +93,15 @@ local netCommand_carryMobj = nc.add(function(p)
 	local mo = p.itemapi_mobjActionTarget
 	if not (mo and mo.valid) then return end
 
-	local itemType = mod.getItemTypeFromMobj(mo)
-	if itemType and mod.carryItem(p, itemType) then
+	local def = mod.getItemDefFromMobj(mo)
+	if not def then return end
+
+	if not def.carriable
+	or def.getCarriable and not def.getCarriable(mo) then
+		return
+	end
+
+	if def.index and mod.carryItem(p, def.index) then
 		local slot = p.itemapi_carrySlots["right_hand"]
 		slot.itemData = mo.itemapi_data
 		P_RemoveMobj(mo)
@@ -348,7 +355,7 @@ mod.addUIMode("action_selection", {
 					local sel = mod.client.actionSelection
 					if not (sel.mobj and sel.mobj.valid) then return false end
 					local def = mod.getItemDefFromMobj(sel.mobj)
-					return (def and def.carriable ~= false)
+					return (def and def.carriable ~= false and not (def.getCarriable and not def.getCarriable(sel.mobj)))
 				end
 			end,
 
@@ -363,8 +370,9 @@ mod.addUIMode("action_selection", {
 						mod.sendNetCommand_storeCarriedItem()
 					end
 				elseif mod.client.actionSelection.mobj then
-					local def = mod.getItemDefFromMobj(mod.client.actionSelection.mobj)
-					if def and def.carriable then
+					local mo = mod.client.actionSelection.mobj
+					local def = mod.getItemDefFromMobj(mo)
+					if def and def.carriable and not (def.getCarriable and not def.getCarriable(mo)) then
 						mod.sendNetCommand_carryMobj()
 					end
 				end

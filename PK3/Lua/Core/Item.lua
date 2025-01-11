@@ -20,6 +20,8 @@ local mod = itemapi
 ---@field carriable? boolean
 ---@field storable?  boolean
 ---
+---@field getCarriable? fun(mobj: mobj_t): boolean
+---
 ---@field actions  itemapi.ItemActionDef[]
 ---@field action?  itemapi.ItemActionDef
 ---@field action1? itemapi.ItemActionDef
