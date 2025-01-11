@@ -47,8 +47,10 @@ local netCommand_performGroundItemAction = nc.add(function(p, stream)
 	local mo = p.itemapi_mobjActionTarget
 	if not (mo and mo.valid) then return end
 
-	local spotIndex
 	local actionDef = mod.getActionDefFromMobj(mo, actionIndex)
+	if not actionDef then return end
+
+	local spotIndex
 	if actionDef.selectSpot then
 		spotIndex = bs.readByte(stream)
 	end
