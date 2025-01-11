@@ -283,9 +283,10 @@ mod.addUIMode("action_selection", {
 	commands = {
 		{
 			id = "perform_action1",
+			name = "perform action 1",
 			defaultKey = "@custom1",
 
-			name = function()
+			getName = function()
 				return mod.client.actionSelection.availableActions[1].def.name
 			end,
 			condition = function()
@@ -297,9 +298,10 @@ mod.addUIMode("action_selection", {
 		},
 		{
 			id = "perform_action2",
+			name = "perform action 2",
 			defaultKey = "@custom2",
 
-			name = function()
+			getName = function()
 				return mod.client.actionSelection.availableActions[2].def.name
 			end,
 			condition = function()
@@ -311,9 +313,10 @@ mod.addUIMode("action_selection", {
 		},
 		{
 			id = "perform_action3",
+			name = "perform action 3",
 			defaultKey = "@custom3",
 
-			name = function()
+			getName = function()
 				return mod.client.actionSelection.availableActions[3].def.name
 			end,
 			condition = function()
@@ -325,10 +328,11 @@ mod.addUIMode("action_selection", {
 		},
 		{
 			id = "carry_or_store",
+			name = "carry/store",
 			defaultKey = "@forward",
 			showOnRight = true,
 
-			name = function()
+			getName = function()
 				return mod.getMainCarriedItemType(consoleplayer) and "store" or "carry"
 			end,
 

@@ -9,6 +9,7 @@ local gui = ljrequire "ljgui"
 ---@field id string
 ---@field index integer
 ---@field name string
+---@field getName fun(): string
 ---@field modal boolean
 ---@field action fun()
 ---
@@ -148,10 +149,8 @@ function mod.drawAvailableCommands(v)
 	for _, cmdDef in ipairs(def.commands) do
 		if cmdDef.condition and not cmdDef.condition() then continue end
 
-		local name = cmdDef.modal and cmdDef.name or mod.uiCommandDefs[cmdDef.id].name
-		if type(name) == "function" then
-			name = name()
-		end
+		local globalCmdDef = cmdDef.modal and cmdDef or mod.uiCommandDefs[cmdDef.id]
+		local name = globalCmdDef.getName and globalCmdDef.getName() or globalCmdDef.name
 
 		if cmdDef.showOnRight then
 			drawActionKey(v, name, cmdDef.id, 304, rightY, true)
