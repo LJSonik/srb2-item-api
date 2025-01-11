@@ -132,9 +132,12 @@ local function removeMobjs(bubble)
 				P_RemoveMobj(mo)
 			end
 		end
-
-		bubble.textMobjs = nil
 	end
+
+	bubble.bubbleMobj = nil
+	bubble.tailMobj = nil
+	bubble.iconMobj = nil
+	bubble.textMobjs = nil
 end
 
 ---@param bubble itemapi.InfoBubble
