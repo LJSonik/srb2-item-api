@@ -76,7 +76,9 @@ mod.addUIMode("large_item_placement", {
 	end,
 
 	leave = function()
-		P_RemoveMobj(mod.client.uiMode.indicatorMobj)
+		if mod.client.uiMode.indicatorMobj.valid then
+			P_RemoveMobj(mod.client.uiMode.indicatorMobj)
+		end
 	end,
 
 	commands = {

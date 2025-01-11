@@ -25,7 +25,9 @@ mod.addUIMode("spot_selection", {
 	end,
 
 	leave = function()
-		P_RemoveMobj(mod.client.uiMode.iconMobj)
+		if mod.client.uiMode.iconMobj.valid then
+			P_RemoveMobj(mod.client.uiMode.iconMobj)
+		end
 		mod.closeActionSelectionData()
 	end,
 
