@@ -387,9 +387,8 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 
 	if actionDef.condition and not actionDef.condition(player, groundItem) then return end
 
-	local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", groundItem)
-
 	-- Ground item already in use but with a different action?
+	local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", groundItem)
 	if action and not (action.index == actionIndex and action.spotIndex == spotIndex) then return end
 
 	if player.itemapi_action then
@@ -397,6 +396,9 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 	end
 
 	if actionDef.duration ~= nil then
+		-- Intentionally done again in case the player's action was stopped
+		local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", groundItem)
+
 		-- Spawn a new action if one didn't exist for this ground item yet
 		if not action then
 			action = mod.spawnAction("ground_item")
@@ -424,13 +426,13 @@ function mod.performMobjAction(player, index, mobj)
 	local actionDef = actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
 	if not actionDef then return end
 
-	local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", mobj)
-
 	if player.itemapi_action then
 		mod.stopAction(player)
 	end
 
 	if actionDef.duration ~= nil then
+		local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", mobj)
+
 		-- Spawn a new action if one didn't exist for this ground item yet
 		if not action then
 			action = mod.spawnAction("mobj")
