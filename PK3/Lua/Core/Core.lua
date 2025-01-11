@@ -186,6 +186,10 @@ end)
 
 ---@param p player_t
 addHook("PlayerQuit", function(p)
+	if p.itemapi_action then
+		mod.stopAction(p)
+	end
+
 	for i = 1, #mod.carrySlotDefs do
 		mod.uncarryItem(p, i)
 	end
