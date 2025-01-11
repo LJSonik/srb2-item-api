@@ -190,7 +190,7 @@ addHook("PlayerQuit", function(p)
 		mod.uncarryItem(p, i)
 	end
 
-	for i = 1, #p.itemapi_infoBubbles do
+	for i = #p.itemapi_infoBubbles, 1, -1 do
 		mod.stopInfoBubble(p, p.itemapi_infoBubbles[i])
 	end
 end)
