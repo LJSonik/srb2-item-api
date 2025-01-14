@@ -183,8 +183,9 @@ function mod.randomAngle()
 	return P_RandomRange(-32768, 32767) * 65536
 end
 
----@param t any[]
----@return any
+---@generic T
+---@param t T[]
+---@return T
 function mod.randomElement(t)
 	return t[P_RandomRange(1, #t)]
 end
