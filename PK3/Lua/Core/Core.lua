@@ -145,6 +145,7 @@ function mod.uninitialiseClientMap()
 	mod.uninitialiseVisualCulling()
 	mod.uninitialiseClientModels()
 	mod.uninitialiseActionTargetIcon() -- !!! INTERFACE
+	mod.closeUI() -- !!! INTERFACE
 
 	mod.client.mapInitialised = false
 end
