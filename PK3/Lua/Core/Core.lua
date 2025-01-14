@@ -67,6 +67,7 @@ end
 function mod.uninitialiseMap()
 	mod.uninitialiseTickers()
 	mod.uninitialiseModels()
+	mod.uninitialiseActions()
 
 	if mod.client.mapInitialised then
 		mod.uninitialiseClientMap()

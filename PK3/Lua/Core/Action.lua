@@ -186,6 +186,12 @@ function mod.despawnAction(action)
 	mod.removeIndexFromUnorderedArrayAndUpdateField(mod.vars.actions, action.arrayIndex, "arrayIndex")
 end
 
+function mod.uninitialiseActions()
+	for i = #mod.vars.actions, 1, -1 do
+		mod.despawnAction(mod.vars.actions[i])
+	end
+end
+
 ---@param player player_t
 ---@param mobj? mobj_t
 ---@return table[]
