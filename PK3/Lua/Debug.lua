@@ -161,7 +161,7 @@ COM_AddCommand("stealitems", function(p, stolenplayer)
 
 	local srcinv = stolenplayer.itemapi_inventory
 	local dstinv = p.itemapi_inventory
-	if not stolenplayer.itemapi_inventory then return end
+	if not srcinv then return end
 
 	local full = false
 
