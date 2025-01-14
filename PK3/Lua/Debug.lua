@@ -75,6 +75,35 @@ local function stringToPlayer(s)
 	return nil
 end
 
+COM_AddCommand("giveitem", function(p, id, quantity, target)
+	if not id then
+		CONS_Printf(p, "giveitem <item type> [quantity] [player name/number]")
+		return
+	end
+
+	quantity = tonumber($ or 1)
+
+	if target then
+		target = stringToPlayer(target)
+
+		if not target then
+			CONS_Printf(p, "Player not found, or partial name ambiguous.")
+			return
+		end
+	else
+		target = p
+	end
+
+	if not mod.itemDefs[id] then
+		CONS_Printf(p, "Item type not found")
+		return
+	end
+
+	if not target.itemapi_inventory then return end
+
+	target.itemapi_inventory:add(id, quantity)
+end, COM_ADMIN)
+
 COM_AddCommand("checkitems", function(p, checkedplayer)
 	if not checkedplayer then
 		CONS_Printf(p, "checkitems <player name/number>")
