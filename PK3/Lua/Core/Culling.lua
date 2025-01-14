@@ -65,7 +65,11 @@ function mod.addModelToCullingSystem(model)
 	addModelToBlock(model, y * NUM_BLOCKS_PER_SIDE + x)
 
 	if viewX == nil then
-		viewX, viewY = displayplayer.mo.x, displayplayer.mo.y
+		if displayplayer.realmo then
+			viewX, viewY = displayplayer.realmo.x, displayplayer.realmo.y
+		else
+			viewX, viewY = 0, 0
+		end
 	end
 
 	local dist = getBlockDistFromRealPos(viewX, viewY, model.x, model.y)
@@ -178,7 +182,12 @@ function mod.updateCulling()
 		cacheDistanceLUT()
 	end
 
-	local newX, newY = displayplayer.mo.x, displayplayer.mo.y
+	local newX, newY
+	if displayplayer.realmo then
+		newX, newY = displayplayer.realmo.x, displayplayer.realmo.y
+	else
+		newX, newY = 0, 0
+	end
 
 	if viewX ~= nil then
 		local oldBX, oldBY = realPosToBlockPos(viewX, viewY)

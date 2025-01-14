@@ -73,7 +73,7 @@ function mod.updateHunger(player)
 
 	player.itemapi_hunger = newHunger
 
-	if newHunger == 0 and newHunger ~= oldHunger then
+	if newHunger == 0 and newHunger ~= oldHunger and player.mo then
 		P_DamageMobj(player.mo, nil, nil, nil, DMG_INSTAKILL)
 	end
 

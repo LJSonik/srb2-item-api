@@ -240,7 +240,7 @@ function mod.updateInfoBubbles(player)
 	for i = 1, #bubbles do
 		local otherBubble = bubbles[i]
 
-		if otherBubble ~= bubble and otherBubble.bubbleMobj then
+		if not (player.mo and otherBubble == bubble) and otherBubble.bubbleMobj then
 			removeMobjs(otherBubble)
 		end
 	end
@@ -254,17 +254,17 @@ function mod.updateInfoBubbles(player)
 		end
 	end
 
-	if not displayplayer then return end
+	if not (player.mo and displayplayer) then return end
 
 	if not (bubble.bubbleMobj and bubble.bubbleMobj.valid) then
 		spawnMobjs(player, bubble)
 	end
 
 	local angle
-	if camera.chase or not (displayplayer.mo and displayplayer.mo.valid) then
+	if camera.chase or not (displayplayer.realmo and displayplayer.realmo.valid) then
 		angle = camera.angle
 	else
-		angle = displayplayer.mo.angle
+		angle = displayplayer.realmo.angle
 	end
 	angle = angle - ANGLE_90
 

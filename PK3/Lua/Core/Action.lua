@@ -286,6 +286,9 @@ end
 function mod.canPlayerContinueAction(player)
 	local action = player.itemapi_action
 
+	local pmo = player.mo
+	if not pmo then return false end
+
 	if action.type == "carried_item" then
 		local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 		if not carriedItemDef then return false end
@@ -296,7 +299,7 @@ function mod.canPlayerContinueAction(player)
 			local groundItem = action.groundItem
 			if not (groundItem and groundItem.valid) then return false end
 
-			local dist = R_PointToDist2(player.mo.x, player.mo.y, groundItem.x, groundItem.y)
+			local dist = R_PointToDist2(pmo.x, pmo.y, groundItem.x, groundItem.y)
 			if dist > MAX_ACTION_DIST then return false end
 
 			local groundItemID = mod.getItemIDFromMobj(groundItem)
@@ -308,7 +311,7 @@ function mod.canPlayerContinueAction(player)
 		local mobj = action.target
 		if not mobj.valid then return false end
 
-		local dist = R_PointToDist2(player.mo.x, player.mo.y, mobj.x, mobj.y)
+		local dist = R_PointToDist2(pmo.x, pmo.y, mobj.x, mobj.y)
 		if dist > MAX_ACTION_DIST then return false end
 
 		local groundItemDef = mod.getItemDefFromMobj(mobj)
@@ -326,7 +329,7 @@ function mod.canPlayerContinueAction(player)
 		local mobj = action.target
 		if not mobj.valid then return false end
 
-		local dist = R_PointToDist2(player.mo.x, player.mo.y, mobj.x, mobj.y)
+		local dist = R_PointToDist2(pmo.x, pmo.y, mobj.x, mobj.y)
 		if dist > MAX_ACTION_DIST then return false end
 	end
 
@@ -464,6 +467,8 @@ end
 ---@return mobj_t?
 function mod.findAimedMobj(player)
 	local playerMobj = player.mo
+	if not playerMobj then return end
+
 	local playerAngle = playerMobj.angle
 
 	local maxDist = MAX_ACTION_DIST

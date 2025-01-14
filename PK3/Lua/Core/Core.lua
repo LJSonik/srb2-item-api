@@ -85,6 +85,26 @@ function mod.initialisePlayer(p)
 	p.itemapi_initialised = true
 end
 
+---@param p player_t
+function mod.uninitialisePlayingPlayer(p)
+	if p == consoleplayer then
+		mod.closeUI() -- !!! INTERFACE
+	end
+
+	if p.itemapi_action then
+		mod.stopAction(p)
+	end
+
+	for i = 1, #mod.carrySlotDefs do
+		mod.uncarryItem(p, i)
+	end
+
+	for i = #p.itemapi_infoBubbles, 1, -1 do
+		mod.stopInfoBubble(p, p.itemapi_infoBubbles[i])
+	end
+end
+
+
 function mod.initialiseClient()
 	mod.loadOptions()
 	mod.loadControlOptions()
@@ -139,6 +159,8 @@ addHook("ThinkFrame", function()
 	mod.vars.time = $ + 1
 
 	for p in players.iterate do
+		if not p.mo then continue end
+
 		mod.updateCarriedItems(p)
 		mod.updateHunger(p)
 		mod.updateInfoBubbles(p)
@@ -182,6 +204,16 @@ addHook("PlayerSpawn", function(p)
 		if slot and not (slot.mobj and slot.mobj.valid) then
 			mod.spawnCarriedItemMobj(p)
 		end
+	end
+end)
+
+---@param p player_t
+addHook("TeamSwitch", function(p, team)
+	local oldSpectator = p.spectator
+	local newSpectator = (team == 0)
+
+	if not oldSpectator and newSpectator then
+		mod.uninitialisePlayingPlayer(p)
 	end
 end)
 

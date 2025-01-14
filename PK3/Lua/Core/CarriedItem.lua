@@ -136,6 +136,8 @@ end
 
 ---@param player player_t
 function mod.updateCarriedItems(player)
+	if not player.mo then return end
+
 	local slots = player.itemapi_carrySlots
 
 	for i = 1, #mod.carrySlotDefs do
