@@ -282,3 +282,24 @@ function mod.parseSpriteFramePairs(s)
 
 	return sprites
 end
+
+---@param players player_t[]
+---@param id itemapi.ItemType
+---@param quantity integer
+---@return boolean added True if the item(s) was/were added. If not, the players do not have enough inventory space.
+function mod.giveItemStackToMultiplePlayers(players, id, quantity)
+	local totalFreeSpace = 0
+	for _, p in ipairs(players) do
+		totalFreeSpace = $ + p.itemapi_inventory:countFreeSpace(id)
+	end
+
+	if totalFreeSpace < quantity then return false end
+
+	while quantity > 0 do
+		local p = itemapi.randomElement(players)
+		p.itemapi_inventory:add(id)
+		quantity = $ - 1
+	end
+
+	return true
+end
