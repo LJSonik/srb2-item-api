@@ -123,6 +123,7 @@ end
 function mod.uninitialiseClientMap()
 	mod.uninitialiseClientTickers()
 	mod.uninitialiseVisualCulling()
+	mod.uninitialiseClientModels()
 	mod.uninitialiseActionTargetIcon() -- !!! INTERFACE
 
 	mod.client.mapInitialised = false

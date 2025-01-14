@@ -344,7 +344,11 @@ function mod.initialiseClientModels()
 	end
 end
 
+function mod.uninitialiseClientModels()
+	mod.client.models = {}
+end
+
 function mod.uninitialiseModels()
 	mod.vars.models = {}
-	mod.client.models = {}
+	mod.uninitialiseClientModels()
 end
