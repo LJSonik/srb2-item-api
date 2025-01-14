@@ -68,29 +68,37 @@ function Inventory:count(id)
 end
 
 ---@param id itemapi.ItemType
----@param quantity? integer Defaults to 1
----@return boolean canAdd True if the item(s) can be added. If not, the inventory does not have enough available space.
-function Inventory:canAdd(id, quantity)
+---@return integer quantity How many times this item can be added being the inventory becomes full.
+function Inventory:countFreeSpace(id)
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
-	if quantity == nil then
-		quantity = 1
-	end
 
 	local maxPerSlot = mod.itemDefs[id].stackable
+	local quantity = 0
 
 	for i = 1, self.numSlots do
 		if self.types[i] ~= id then continue end
-		quantity = $ - (maxPerSlot - self.quantities[i])
+		quantity = $ + (maxPerSlot - self.quantities[i])
 	end
 
 	for i = 1, self.numSlots do
 		if self.types[i] ~= nil then continue end
-		quantity = $ - maxPerSlot
+		quantity = $ + maxPerSlot
 	end
 
-	return (quantity <= 0)
+	return quantity
+end
+
+---@param id itemapi.ItemType
+---@param quantity? integer Defaults to 1
+---@return boolean canAdd True if the item(s) can be added. If not, the inventory does not have enough available space.
+function Inventory:canAdd(id, quantity)
+	if quantity == nil then
+		quantity = 1
+	end
+
+	return (self:countFreeSpace(id) >= quantity)
 end
 
 ---@param id itemapi.ItemType
