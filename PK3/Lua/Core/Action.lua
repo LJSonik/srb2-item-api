@@ -153,7 +153,7 @@ function mod.updateActions()
 
 		mod.updateActionAnimation(action)
 
-		if action.progress >= actionDef.duration then
+		if action.progress >= (actionDef.duration or 0) then
 			local actor = mod.randomElement(action.actors)
 
 			if action.type == "carried_item" then
@@ -161,7 +161,7 @@ function mod.updateActions()
 			elseif action.type == "ground_item" then
 				local groundItemDef = mod.getItemDefFromMobj(action.target)
 				local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
-				actionDef.action(actor, action.target, groundItemDef, carriedItemDef)
+				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
 			elseif action.type == "mobj" then
 				actionDef.action(actor, action.target)
 			end
@@ -404,25 +404,21 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 		mod.stopAction(player)
 	end
 
-	if actionDef.duration ~= nil then
-		-- Intentionally done again in case the player's action was stopped
-		local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", groundItem)
+	-- Intentionally done again in case the player's action was stopped
+	local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", groundItem)
 
-		-- Spawn a new action if one didn't exist for this ground item yet
-		if not action then
-			action = mod.spawnAction("ground_item")
-			action.target = groundItem
-			action.index = actionIndex
-			action.spotIndex = spotIndex
-		end
-
-		table.insert(action.actors, player)
-		player.itemapi_action = action
-
-		mod.startActionAnimation(action)
-	else
-		actionDef.action(player, groundItem, groundItemDef, carriedItemDef, spotIndex)
+	-- Spawn a new action if one didn't exist for this ground item yet
+	if not action then
+		action = mod.spawnAction("ground_item")
+		action.target = groundItem
+		action.index = actionIndex
+		action.spotIndex = spotIndex
 	end
+
+	table.insert(action.actors, player)
+	player.itemapi_action = action
+
+	mod.startActionAnimation(action)
 end
 
 ---@param player player_t
