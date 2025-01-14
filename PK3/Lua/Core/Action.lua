@@ -22,6 +22,7 @@ local mod = itemapi
 ---@field condition? fun(player: player_t, mobj: mobj_t): boolean
 ---@field selectSpot? boolean
 ---@field action fun(player: player_t, mobj: mobj_t, groundItemDef: itemapi.ItemDef, carriedItemDef: itemapi.ItemDef?, spotIndex: integer?)
+---@field actionV2 fun(action: itemapi.Action, mobj: mobj_t, actors: player_t[])
 
 ---@class itemapi.MobjActionDef : itemapi.ActionDef
 ---@field mobjType mobjtype_t
@@ -161,7 +162,12 @@ function mod.updateActions()
 			elseif action.type == "ground_item" then
 				local groundItemDef = mod.getItemDefFromMobj(action.target)
 				local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
-				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
+
+				if actionDef.actionV2 then
+					actionDef.actionV2(action, action.target, action.actors)
+				else
+					actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
+				end
 			elseif action.type == "mobj" then
 				actionDef.action(actor, action.target)
 			end
