@@ -44,6 +44,7 @@ for _, filename in ipairs{
 	"Core/CollisionMath.lua",
 	"Core/Core.lua",
 	"Core/Item.lua",
+	"Core/SurfaceMaterial.lua",
 	"Core/Action.lua",
 	"Core/ActionAnimation.lua",
 	"Core/CarrySlot.lua",
