@@ -121,10 +121,11 @@ end
 ---@param p player_t
 ---@param itemType itemapi.ItemType
 ---@param adjusted? boolean Only use serverside or it will desync
+---@param canPlaceOnSurface? fun(surfaceType: "sector_floor"|"fof_top", surface: any): boolean
 ---@return fixed_t?
 ---@return fixed_t?
 ---@return fixed_t?
-function mod.findItemPlacementPosition(p, itemType, adjusted)
+function mod.findItemPlacementPosition(p, itemType, adjusted, canPlaceOnSurface)
 	local bestX, bestY, bestZ
 	local bestFOF
 
@@ -157,7 +158,8 @@ function mod.findItemPlacementPosition(p, itemType, adjusted)
 
 		local z = P_GetZAt(sector.f_slope, x, y, sector.floorheight)
 
-		if minZ <= z and maxZ >= z then
+		if minZ <= z and maxZ >= z
+		and (not canPlaceOnSurface or canPlaceOnSurface("sector_floor", sector)) then
 			-- Calculate more accurately this time
 			z = findItemFloorZOnSurface(x, y, mobjRadius)
 
@@ -174,7 +176,8 @@ function mod.findItemPlacementPosition(p, itemType, adjusted)
 			local z = P_GetZAt(fof.t_slope, x, y, fof.topheight)
 
 			if minZ <= z and maxZ >= z
-			and fof.flags & FF_BLOCKOTHERS then
+			and fof.flags & FF_BLOCKOTHERS
+			and (not canPlaceOnSurface or canPlaceOnSurface("fof_top", fof)) then
 				-- Calculate more accurately this time
 				z = findItemFloorZOnSurface(x, y, mobjRadius, fof)
 
@@ -199,13 +202,14 @@ end
 ---@param player player_t
 ---@param itemType integer
 ---@param itemData? any
+---@param canPlaceOnSurface? fun(surfaceType: "sector_floor"|"fof_top", surface: any): boolean
 ---@return mobj_t?
-function mod.placeItem(player, itemType, itemData)
+function mod.placeItem(player, itemType, itemData, canPlaceOnSurface)
 	local def = mod.itemDefs[itemType]
 
 	local bestX, bestY, bestZ
 	if mod.itemDefs[itemType].carriable then
-		bestX, bestY, bestZ = mod.findItemPlacementPosition(player, itemType, true)
+		bestX, bestY, bestZ = mod.findItemPlacementPosition(player, itemType, true, canPlaceOnSurface)
 	else
 		bestX, bestY, bestZ = mod.findLargeItemPlacementPosition(player, itemType)
 	end
