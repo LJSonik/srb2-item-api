@@ -107,6 +107,8 @@ end
 ---@param model itemapi.Model
 ---@param oldX fixed_t
 ---@param oldY fixed_t
+---@param newX fixed_t
+---@param newY fixed_t
 function mod.moveModelInCullingSystem(model, oldX, oldY, newX, newY)
 	if not initialised or viewX == nil then return end
 
