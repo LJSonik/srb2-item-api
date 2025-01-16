@@ -175,7 +175,7 @@ function mod.despawnModel(model)
 	models[i].index = i
 	models[highestIndex] = nil
 
-	mod.removeModelFromCullingSystem(model)
+	mod.removeEntityFromCullingSystem("model", model, model.x, model.y)
 
 	clModels[i] = clModels[highestIndex]
 	clModels[highestIndex] = nil
@@ -186,9 +186,9 @@ end
 function mod.setModelType(model, id)
 	local def = mod.modelDefs[id]
 
-	mod.removeModelFromCullingSystem(model)
+	mod.removeEntityFromCullingSystem("model", model, model.x, model.y)
 	model.type = def.index
-	mod.addModelToCullingSystem(model)
+	mod.addEntityToCullingSystem("model", model, model.x, model.y)
 end
 
 function mod.updateModels()
@@ -299,40 +299,11 @@ function mod.setModelTransform(model, x, y, z, rotation, scale)
 		end
 
 		if oldX ~= nil then
-			mod.moveModelInCullingSystem(model, oldX, oldY, x, y)
+			mod.moveEntityInCullingSystem("model", model, oldX, oldY, x, y)
 		else
-			mod.addModelToCullingSystem(model)
+			mod.addEntityToCullingSystem("model", model, model.x, model.y)
 		end
 	end
-end
-
----@param index integer
-function mod.spawnClientModel(index)
-	local model = mod.vars.models[index]
-	local clModels = mod.client.models
-	local def = mod.modelDefs[model.type]
-
-	if clModels[index] or model.parts then return end
-
-	clModels[index] = spawnPartsFromDefCache(def.cache)
-	applyTransform(model, clModels[index])
-end
-
----@param index integer
-function mod.despawnClientModel(index)
-	local clModels = mod.client.models
-	local clModel = clModels[index]
-
-	if not clModel then return end
-
-	for i = 1, #clModel do
-		local mo = clModel[i]
-		if mo.valid then
-			P_RemoveMobj(mo)
-		end
-	end
-
-	clModels[index] = nil
 end
 
 function mod.initialiseClientModels()
@@ -340,7 +311,8 @@ function mod.initialiseClientModels()
 
 	local models = mod.vars.models
 	for i = 1, #models do
-		mod.addModelToCullingSystem(models[i])
+		local model = models[i]
+		mod.addEntityToCullingSystem("model", model, model.x, model.y)
 	end
 end
 
@@ -352,3 +324,34 @@ function mod.uninitialiseModels()
 	mod.vars.models = {}
 	mod.uninitialiseClientModels()
 end
+
+
+mod.addCullableEntity("model", {
+	spawn = function(model)
+		local index = model.index
+		local clModels = mod.client.models
+		local def = mod.modelDefs[model.type]
+
+		if clModels[index] or model.parts then return end
+
+		clModels[index] = spawnPartsFromDefCache(def.cache)
+		applyTransform(model, clModels[index])
+	end,
+
+	despawn = function(model)
+		local index = model.index
+		local clModels = mod.client.models
+		local clModel = clModels[index]
+
+		if not clModel then return end
+
+		for i = 1, #clModel do
+			local mo = clModel[i]
+			if mo.valid then
+				P_RemoveMobj(mo)
+			end
+		end
+
+		clModels[index] = nil
+	end,
+})

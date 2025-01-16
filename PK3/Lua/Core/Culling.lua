@@ -2,6 +2,13 @@
 local mod = itemapi
 
 
+---@class itemapi.CullableEntityDef
+---@field id    string
+---@field index integer
+---@field spawn fun(entity: any)
+---@field despawn fun(entity: any)
+
+
 local MAP_SIZE = 65536
 local MAP_SIZE_HALF = MAP_SIZE / 2
 local BLOCK_SIZE = 512
@@ -10,10 +17,27 @@ local CULL_DIST = 2048
 
 
 local initialised = false
-local blocks = {}
+local blocks_entity = {}
+local blocks_entityType = {}
 local viewX, viewY
 local distLUT -- Note: takes a lot of RAM... not ideal
 
+---@type { [string|integer]: itemapi.CullableEntityDef }
+mod.cullableEntityDefs = {}
+
+
+---@param id string
+---@param def itemapi.CullableEntityDef
+function mod.addCullableEntity(id, def)
+	if type(id) ~= "string" then
+		error("missing or invalid cullable entity ID", 2)
+	end
+
+	def.index = #mod.cullableEntityDefs + 1
+	def.id = id
+	mod.cullableEntityDefs[def.index] = def
+	mod.cullableEntityDefs[id] = def
+end
 
 local function realPosToBlockPos(x, y)
 	return
@@ -41,28 +65,40 @@ local function cacheDistanceLUT()
 	end
 end
 
----@param model itemapi.Model
+---@param entityType string|integer
+---@param entity any
 ---@param blockIndex integer
-local function addModelToBlock(model, blockIndex)
-	local block = blocks[blockIndex]
-	if not block then
-		block = {}
-		blocks[blockIndex] = block
+local function addEntityToBlock(entityType, entity, blockIndex)
+	-- mod.logDebugLine("addEntityToBlock " .. entity.debugID)
+
+	if not blocks_entity[blockIndex] then
+		blocks_entity[blockIndex] = {}
+		blocks_entityType[blockIndex] = {}
 	end
 
-	block[#block + 1] = model
+	local block_entity = blocks_entity[blockIndex]
+	local block_entityType = blocks_entityType[blockIndex]
+
+	local i = #block_entity + 1
+	block_entity[i] = entity
+	block_entityType[i] = entityType
 end
 
----@param model itemapi.Model
-function mod.addModelToCullingSystem(model)
+---@param entityType string|integer
+---@param entity any
+---@param x fixed_t
+---@param y fixed_t
+function mod.addEntityToCullingSystem(entityType, entity, x, y)
 	if not initialised then return end
+
+	-- mod.logDebugLine("addEntityToCullingSystem " .. entity.debugID)
 
 	if not distLUT then
 		cacheDistanceLUT()
 	end
 
-	local x, y = realPosToBlockPos(model.x, model.y)
-	addModelToBlock(model, y * NUM_BLOCKS_PER_SIDE + x)
+	local bx, by = realPosToBlockPos(x, y)
+	addEntityToBlock(entityType, entity, by * NUM_BLOCKS_PER_SIDE + bx)
 
 	if viewX == nil then
 		if displayplayer.realmo then
@@ -72,44 +108,59 @@ function mod.addModelToCullingSystem(model)
 		end
 	end
 
-	local dist = getBlockDistFromRealPos(viewX, viewY, model.x, model.y)
+	local dist = getBlockDistFromRealPos(viewX, viewY, x, y)
 	if dist <= CULL_DIST / BLOCK_SIZE then
-		mod.spawnClientModel(model.index)
+		local def = mod.cullableEntityDefs[entityType]
+		def.spawn(entity)
 	end
 end
 
----@param model itemapi.Model
+---@param entity any
 ---@param blockIndex integer
-local function removeModelFromBlock(model, blockIndex)
-	local block = blocks[blockIndex]
-	local highestIndexInBlock = #block
+local function removeEntityFromBlock(entity, blockIndex)
+	-- mod.logDebugLine("removeEntityFromBlock " .. entity.debugID)
+
+	local block_entity = blocks_entity[blockIndex]
+	local block_entityType = blocks_entityType[blockIndex]
+	local highestIndexInBlock = #block_entity
 
 	-- Remove element from block
-	local indexInBlock = mod.findInArray(block, model)
-	block[indexInBlock] = block[highestIndexInBlock]
-	block[highestIndexInBlock] = nil
+	local indexInBlock = mod.findInArray(block_entity, entity)
+	block_entity[indexInBlock] = block_entity[highestIndexInBlock]
+	block_entity[highestIndexInBlock] = nil
+	block_entityType[indexInBlock] = block_entityType[highestIndexInBlock]
+	block_entityType[highestIndexInBlock] = nil
 
 	-- Remove block if empty
 	if highestIndexInBlock == 1 then -- Was 1 before removing the last element, thus now 0
-		blocks[blockIndex] = nil
+		blocks_entity[blockIndex] = nil
+		blocks_entityType[blockIndex] = nil
 	end
 end
 
----@param model itemapi.Model
-function mod.removeModelFromCullingSystem(model)
+---@param entityType string|integer
+---@param entity any
+---@param x fixed_t
+---@param y fixed_t
+function mod.removeEntityFromCullingSystem(entityType, entity, x, y)
 	if not initialised then return end
 
-	local x, y = realPosToBlockPos(model.x, model.y)
-	removeModelFromBlock(model, y * NUM_BLOCKS_PER_SIDE + x)
-	mod.despawnClientModel(model.index)
+	-- mod.logDebugLine("removeEntityFromCullingSystem " .. entity.debugID)
+
+	local bx, by = realPosToBlockPos(x, y)
+	removeEntityFromBlock(entity, by * NUM_BLOCKS_PER_SIDE + bx)
+
+	local def = mod.cullableEntityDefs[entityType]
+	def.despawn(entity)
 end
 
----@param model itemapi.Model
+---@param entityType string|integer
+---@param entity any
 ---@param oldX fixed_t
 ---@param oldY fixed_t
 ---@param newX fixed_t
 ---@param newY fixed_t
-function mod.moveModelInCullingSystem(model, oldX, oldY, newX, newY)
+function mod.moveEntityInCullingSystem(entityType, entity, oldX, oldY, newX, newY)
 	if not initialised or viewX == nil then return end
 
 	local oldBX, oldBY = realPosToBlockPos(oldX, oldY)
@@ -120,16 +171,20 @@ function mod.moveModelInCullingSystem(model, oldX, oldY, newX, newY)
 
 	if oldBlockIndex == newBlockIndex then return end
 
-	removeModelFromBlock(model, oldBlockIndex)
-	addModelToBlock(model, newBlockIndex)
+	-- mod.logDebugLine("moveEntityInCullingSystem " .. entity.debugID)
+
+	removeEntityFromBlock(entity, oldBlockIndex)
+	addEntityToBlock(entityType, entity, newBlockIndex)
 
 	local cullDist = CULL_DIST / BLOCK_SIZE
 	local oldInView = (getBlockDistFromRealPos(viewX, viewY, oldX, oldY) <= cullDist)
 	local newInView = (getBlockDistFromRealPos(viewX, viewY, newX, newY) <= cullDist)
 	if not oldInView and newInView then
-		mod.spawnClientModel(model.index)
+		local def = mod.cullableEntityDefs[entityType]
+		def.spawn(entity)
 	elseif oldInView and not newInView then
-		mod.despawnClientModel(model.index)
+		local def = mod.cullableEntityDefs[entityType]
+		def.despawn(entity)
 	end
 end
 
@@ -145,11 +200,13 @@ local function hideOldBlocks(oldBX, oldBY, newBX, newBY)
 			if newDist <= cullDist then continue end
 
 			local blockIndex = y * NUM_BLOCKS_PER_SIDE + x
-			local block = blocks[blockIndex]
-			if not block then continue end
+			local block_entity = blocks_entity[blockIndex]
+			if not block_entity then continue end
+			local block_entityType = blocks_entityType[blockIndex]
 
-			for i = 1, #block do
-				mod.despawnClientModel(block[i].index)
+			for i = 1, #block_entity do
+				local def = mod.cullableEntityDefs[block_entityType[i]]
+				def.despawn(block_entity[i])
 			end
 		end
 	end
@@ -167,11 +224,13 @@ local function showNewBlocks(oldBX, oldBY, newBX, newBY)
 			if oldDist <= cullDist then continue end
 
 			local blockIndex = y * NUM_BLOCKS_PER_SIDE + x
-			local block = blocks[blockIndex]
-			if not block then continue end
+			local block_entity = blocks_entity[blockIndex]
+			if not block_entity then continue end
+			local block_entityType = blocks_entityType[blockIndex]
 
-			for i = 1, #block do
-				mod.spawnClientModel(block[i].index)
+			for i = 1, #block_entity do
+				local def = mod.cullableEntityDefs[block_entityType[i]]
+				def.spawn(block_entity[i])
 			end
 		end
 	end
@@ -211,7 +270,8 @@ function mod.initialiseVisualCulling()
 end
 
 function mod.uninitialiseVisualCulling()
-	blocks = {}
+	blocks_entity = {}
+	blocks_entityType = {}
 	viewX, viewY = nil, nil
 
 	initialised = false
