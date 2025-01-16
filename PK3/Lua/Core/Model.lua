@@ -22,7 +22,7 @@ local mod = itemapi
 ---@field rotation angle_t
 ---@field scale fixed_t
 
----@class itemapi.ClientModel
+---@class itemapi.ModelAvatar
 ---@field [integer] mobj_t
 
 
@@ -32,8 +32,8 @@ local FU = FU
 ---@type itemapi.Model[]
 mod.vars.models = {}
 
----@type itemapi.ClientModel[]
-mod.client.models = {}
+---@type itemapi.ModelAvatar[]
+mod.client.modelAvatars = {}
 
 
 freeslot("MT_ITEMAPI_MODELPART", "S_ITEMAPI_MODELPART")
@@ -168,7 +168,7 @@ end
 function mod.despawnModel(model)
 	local i = model.index
 	local models = mod.vars.models
-	local clModels = mod.client.models
+	local avatars = mod.client.modelAvatars
 	local highestIndex = #models
 
 	models[i] = models[highestIndex]
@@ -177,8 +177,8 @@ function mod.despawnModel(model)
 
 	mod.removeEntityFromCullingSystem("model", model, model.x, model.y)
 
-	clModels[i] = clModels[highestIndex]
-	clModels[highestIndex] = nil
+	avatars[i] = avatars[highestIndex]
+	avatars[highestIndex] = nil
 end
 
 ---@param model itemapi.Model
@@ -294,8 +294,8 @@ function mod.setModelTransform(model, x, y, z, rotation, scale)
 	if model.parts then
 		applyTransform(model, model.parts)
 	else
-		if mod.client.models[model.index] then
-			applyTransform(model, mod.client.models[model.index])
+		if mod.client.modelAvatars[model.index] then
+			applyTransform(model, mod.client.modelAvatars[model.index])
 		end
 
 		if oldX ~= nil then
@@ -307,7 +307,7 @@ function mod.setModelTransform(model, x, y, z, rotation, scale)
 end
 
 function mod.initialiseClientModels()
-	mod.client.models = {}
+	mod.client.modelAvatars = {}
 
 	local models = mod.vars.models
 	for i = 1, #models do
@@ -317,7 +317,7 @@ function mod.initialiseClientModels()
 end
 
 function mod.uninitialiseClientModels()
-	mod.client.models = {}
+	mod.client.modelAvatars = {}
 end
 
 function mod.uninitialiseModels()
@@ -329,29 +329,29 @@ end
 mod.addCullableEntity("model", {
 	spawn = function(model)
 		local index = model.index
-		local clModels = mod.client.models
+		local avatars = mod.client.modelAvatars
 		local def = mod.modelDefs[model.type]
 
-		if clModels[index] or model.parts then return end
+		if avatars[index] or model.parts then return end
 
-		clModels[index] = spawnPartsFromDefCache(def.cache)
-		applyTransform(model, clModels[index])
+		avatars[index] = spawnPartsFromDefCache(def.cache)
+		applyTransform(model, avatars[index])
 	end,
 
 	despawn = function(model)
 		local index = model.index
-		local clModels = mod.client.models
-		local clModel = clModels[index]
+		local avatars = mod.client.modelAvatars
+		local avatar = avatars[index]
 
-		if not clModel then return end
+		if not avatar then return end
 
-		for i = 1, #clModel do
-			local mo = clModel[i]
+		for i = 1, #avatar do
+			local mo = avatar[i]
 			if mo.valid then
 				P_RemoveMobj(mo)
 			end
 		end
 
-		clModels[index] = nil
+		avatars[index] = nil
 	end,
 })
