@@ -136,7 +136,7 @@ end
 
 function mod.initialiseClientMap()
 	mod.initialiseVisualCulling()
-	mod.initialiseClientModels()
+	mod.initialiseModelAvatars()
 
 	mod.client.mapInitialised = true
 end
@@ -144,7 +144,7 @@ end
 function mod.uninitialiseClientMap()
 	mod.uninitialiseClientTickers()
 	mod.uninitialiseVisualCulling()
-	mod.uninitialiseClientModels()
+	mod.uninitialiseModelAvatars()
 	mod.uninitialiseActionTargetIcon() -- !!! INTERFACE
 	mod.closeUI() -- !!! INTERFACE
 

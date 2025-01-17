@@ -13,6 +13,7 @@ local mod = itemapi
 ---@class itemapi.Model
 ---@field index integer
 ---@field type integer
+---@field clientside? boolean
 ---@field parts? mobj_t[] Only used for solid models
 ---@field mobj? mobj_t Only used if attached to a mobj
 ---
@@ -32,8 +33,14 @@ local FU = FU
 ---@type itemapi.Model[]
 mod.vars.models = {}
 
+---@type itemapi.Model[]
+mod.client.models = {}
+
 ---@type itemapi.ModelAvatar[]
 mod.client.modelAvatars = {}
+
+---@type itemapi.ModelAvatar[]
+mod.client.clientModelAvatars = {}
 
 
 freeslot("MT_ITEMAPI_MODELPART", "S_ITEMAPI_MODELPART")
@@ -107,21 +114,33 @@ end
 ---@param y fixed_t
 ---@param z fixed_t
 ---@param id string|integer
+---@param clientside boolean
 ---@return itemapi.Model
-function mod.spawnModel(x, y, z, id)
+local function spawnModel(x, y, z, id, clientside)
+	local models = clientside and mod.client.models or mod.vars.models
 	local def = mod.modelDefs[id]
-	local index = #mod.vars.models + 1
+	local index = #models + 1
 
 	---@type itemapi.Model
 	local model = {
 		index = index,
 		type = def.index,
+		clientside = clientside or nil
 	}
 
-	table.insert(mod.vars.models, model)
+	table.insert(models, model)
 	mod.setModelTransform(model, x, y, z, 0, FU)
 
 	return model
+end
+
+---@param x fixed_t
+---@param y fixed_t
+---@param z fixed_t
+---@param id string|integer
+---@return itemapi.Model
+function mod.spawnModel(x, y, z, id)
+	return spawnModel(x, y, z, id, false)
 end
 
 ---@param x fixed_t
@@ -150,7 +169,7 @@ end
 ---@param id string|integer
 ---@return itemapi.Model
 function mod.spawnModelOnMobj(mobj, id)
-	local model = mod.spawnModel(mobj.x, mobj.y, mobj.z, id)
+	local model = spawnModel(mobj.x, mobj.y, mobj.z, id, false)
 	model.mobj = mobj
 	return model
 end
@@ -164,11 +183,20 @@ function mod.spawnSolidModelOnMobj(mobj, id)
 	return model
 end
 
+---@param x fixed_t
+---@param y fixed_t
+---@param z fixed_t
+---@param id string|integer
+---@return itemapi.Model
+function mod.spawnClientModel(x, y, z, id)
+	return spawnModel(x, y, z, id, true)
+end
+
 ---@param model itemapi.Model
 function mod.despawnModel(model)
 	local i = model.index
-	local models = mod.vars.models
-	local avatars = mod.client.modelAvatars
+	local models = model.clientside and mod.client.models or mod.vars.models
+	local avatars = model.clientside and mod.client.clientModelAvatars or mod.client.modelAvatars
 	local highestIndex = #models
 
 	models[i] = models[highestIndex]
@@ -294,8 +322,9 @@ function mod.setModelTransform(model, x, y, z, rotation, scale)
 	if model.parts then
 		applyTransform(model, model.parts)
 	else
-		if mod.client.modelAvatars[model.index] then
-			applyTransform(model, mod.client.modelAvatars[model.index])
+		local avatars = model.clientside and mod.client.clientModelAvatars or mod.client.modelAvatars
+		if avatars[model.index] then
+			applyTransform(model, avatars[model.index])
 		end
 
 		if oldX ~= nil then
@@ -306,30 +335,35 @@ function mod.setModelTransform(model, x, y, z, rotation, scale)
 	end
 end
 
-function mod.initialiseClientModels()
+function mod.initialiseModelAvatars()
 	mod.client.modelAvatars = {}
+	mod.client.clientModelAvatars = {}
 
-	local models = mod.vars.models
-	for i = 1, #models do
-		local model = models[i]
-		mod.addEntityToCullingSystem("model", model, model.x, model.y)
+	for _, models in ipairs{ mod.vars.models, mod.client.models } do
+		for i = 1, #models do
+			local model = models[i]
+			mod.addEntityToCullingSystem("model", model, model.x, model.y)
+		end
 	end
 end
 
-function mod.uninitialiseClientModels()
+function mod.uninitialiseModelAvatars()
 	mod.client.modelAvatars = {}
+	mod.client.clientModelAvatars = {}
 end
 
 function mod.uninitialiseModels()
 	mod.vars.models = {}
-	mod.uninitialiseClientModels()
+	mod.client.models = {}
+	mod.uninitialiseModelAvatars()
 end
 
 
 mod.addCullableEntity("model", {
+	---@param model itemapi.Model
 	spawn = function(model)
 		local index = model.index
-		local avatars = mod.client.modelAvatars
+		local avatars = model.clientside and mod.client.clientModelAvatars or mod.client.modelAvatars
 		local def = mod.modelDefs[model.type]
 
 		if avatars[index] or model.parts then return end
@@ -338,9 +372,10 @@ mod.addCullableEntity("model", {
 		applyTransform(model, avatars[index])
 	end,
 
+	---@param model itemapi.Model
 	despawn = function(model)
 		local index = model.index
-		local avatars = mod.client.modelAvatars
+		local avatars = model.clientside and mod.client.clientModelAvatars or mod.client.modelAvatars
 		local avatar = avatars[index]
 
 		if not avatar then return end
