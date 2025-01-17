@@ -2,27 +2,34 @@
 local mod = itemapi
 
 
----@type mobj_t[][]
-mod.vars.mobjTickers_mobj = {}
-
----@type integer[][]
-mod.vars.mobjTickers_callbackID = {}
+mod.vars.mobjTickers = {}
 
 ---@type boolean
 mod.vars.tickersInitialised = false
 
----@type fun(mobj: mobj_t, deltaTime: tic_t)[][]?
-local mobjTickers_callback = nil
+---@type integer
+mod.vars.nextTickerID = 1
+
+local mobjTickerIdToFrequency = nil
+local mobjTickerIdToIndex = nil
+local mobjTickerCallbacks = nil
 
 
-local function cacheCallbacks()
-	mobjTickers_callback = {}
+local function cacheClientData()
+	mobjTickerIdToFrequency = {}
+	mobjTickerIdToIndex = {}
+	mobjTickerCallbacks = {}
 
 	for freq = 1, TICRATE do
-		mobjTickers_callback[freq] = {}
+		mobjTickerIdToIndex[freq] = {}
+		mobjTickerCallbacks[freq] = {}
 
-		for i, id in ipairs(mod.vars.mobjTickers_callbackID[freq]) do
-			mobjTickers_callback[freq][i] = mod.idToEntity[id]
+		local tickers = mod.vars.mobjTickers[freq]
+		for i = 1, #tickers.ids do
+			local id = tickers.ids[i]
+			mobjTickerIdToFrequency[id] = freq
+			mobjTickerIdToIndex[id] = i
+			mobjTickerCallbacks[freq][i] = mod.idToEntity[tickers.callbackIDs[i]]
 		end
 	end
 end
@@ -35,58 +42,93 @@ function mod.startMobjTicker(mobj, callback, frequency)
 		mod.initialiseTickers()
 	end
 
-	if not mobjTickers_callback then
-		cacheCallbacks()
+	if not mobjTickerCallbacks then
+		cacheClientData()
 	end
 
 	if frequency <= TICRATE then
-		local tickers_mobj = mod.vars.mobjTickers_mobj[frequency]
-		local i = #tickers_mobj + 1
+		local tickers = mod.vars.mobjTickers[frequency]
+		local i = #tickers.ids + 1
 
-		tickers_mobj[i] = mobj
-		mod.vars.mobjTickers_callbackID[frequency][i] = mod.entityToID[callback]
-		mobjTickers_callback[frequency][i] = callback
+		local id = mod.vars.nextTickerID
+		tickers.ids[i] = id
+		tickers.mobjs[i] = mobj
+		tickers.callbackIDs[i] = mod.entityToID[callback]
+		mobjTickerIdToFrequency[id] = frequency
+		mobjTickerIdToIndex[id] = i
+		mobjTickerCallbacks[frequency][i] = callback
+	else
+		error "unimplemented for frequencies > TICRATE"
+	end
+
+	mod.vars.nextTickerID = $ + 1
+end
+
+---@param id integer
+function mod.stopMobjTicker(id)
+	if not mobjTickerCallbacks then
+		cacheClientData()
+	end
+
+	local frequency = mobjTickerIdToFrequency[id]
+
+	if frequency <= TICRATE then
+		local tickers = mod.vars.mobjTickers[frequency]
+		local i = mobjTickerIdToIndex[id]
+		local len = #tickers.ids
+
+		local ids = tickers.ids
+		local mobjs = tickers.mobjs
+		local callbackIDs = tickers.callbackIDs
+		local callbacks = mobjTickerCallbacks[frequency]
+
+		mobjTickerIdToIndex[ids[len]] = i
+
+		ids[i] = ids[len]
+		mobjs[i] = mobjs[len]
+		callbackIDs[i] = callbackIDs[len]
+		callbacks[i] = callbacks[len]
+
+		ids[len] = nil
+		mobjs[len] = nil
+		callbackIDs[len] = nil
+		callbacks[len] = nil
+
+		mobjTickerIdToFrequency[id] = nil
+		mobjTickerIdToIndex[id] = nil
 	else
 		error "unimplemented for frequencies > TICRATE"
 	end
 end
 
 function mod.updateTickers()
-	if not mobjTickers_callback then
-		cacheCallbacks()
+	if not mobjTickerCallbacks then
+		cacheClientData()
 	end
 
-	local tickers_mobj = mod.vars.mobjTickers_mobj
-	local tickers_callbackID = mod.vars.mobjTickers_callbackID
-	local tickers_callback = mobjTickers_callback
 	local time = leveltime
 
 	for freq = 1, TICRATE do
 		if time % freq ~= 0 then continue end
 
-		local list_mobj = tickers_mobj[freq]
-		local list_callback = tickers_callback[freq]
+		local tickers = mod.vars.mobjTickers[freq]
+		local mobjs = tickers.mobjs
+		local callbacks = mobjTickerCallbacks[freq]
 
-		for i = #list_mobj, 1, -1 do
-			local mo = list_mobj[i]
+		for i = #mobjs, 1, -1 do
+			local mo = mobjs[i]
+
+			-- !!!
+			if not mo then
+				dump("ticker mobjs", mobjs)
+			end
 
 			if not mo.valid then
-				local len = #list_mobj
-
-				list_mobj[i] = list_mobj[len]
-				list_mobj[len] = nil
-
-				local list_callbackID = tickers_callbackID[freq]
-				list_callbackID[i] = list_callbackID[len]
-				list_callbackID[len] = nil
-
-				list_callback[i] = list_callback[len]
-				list_callback[len] = nil
-
+				mod.stopMobjTicker(tickers.ids[i])
 				continue
 			end
 
-			local callback = list_callback[i]
+			local callback = callbacks[i]
 			callback(mo, freq)
 		end
 	end
@@ -96,8 +138,11 @@ function mod.initialiseTickers()
 	if mod.vars.tickersInitialised then return end
 
 	for freq = 1, TICRATE do
-		mod.vars.mobjTickers_mobj[freq] = {}
-		mod.vars.mobjTickers_callbackID[freq] = {}
+		mod.vars.mobjTickers[freq] = {
+			ids = {},
+			mobjs = {},
+			callbackIDs = {}
+		}
 	end
 
 	mod.vars.tickersInitialised = true
@@ -106,14 +151,13 @@ end
 function mod.uninitialiseTickers()
 	if not mod.vars.tickersInitialised then return end
 
-	mod.vars.mobjTickers_mobj = {}
-	mod.vars.mobjTickers_callbackID = {}
-
+	mod.vars.mobjTickers = {}
 	mod.uninitialiseClientTickers()
-
 	mod.vars.tickersInitialised = false
 end
 
 function mod.uninitialiseClientTickers()
-	mobjTickers_callback = nil
+	mobjTickerIdToFrequency = nil
+	mobjTickerIdToIndex = nil
+	mobjTickerCallbacks = nil
 end
