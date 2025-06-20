@@ -244,9 +244,6 @@ addHook("GameQuit", function()
 	if mod.client.initialised then
 		mod.uninitialiseClient()
 	end
-
-	-- !!!! HACK
-	mod.chatactive = false
 end)
 
 addHook("NetVars", function()

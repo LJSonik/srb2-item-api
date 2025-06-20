@@ -253,23 +253,9 @@ function mod.disableGameKeys()
 end
 
 
--- !!!! Hacky workaround for 2.2.14 and earlier, which trigger key events even when the chatbox is open
-mod.chatactive = false
-
 ---@param key keyevent_t
 addHook("KeyDown", function(key)
-	-- !!!! HACK
-	if (mod.isKeyBoundToGameControl(key.name, GC_TALKKEY) or mod.isKeyBoundToGameControl(key.name, GC_TEAMKEY))
-	and not mod.chatactive and netgame
-	and (isserver or IsPlayerAdmin(consoleplayer) or not CV_FindVar("mute").value) then
-		mod.chatactive = true
-		return
-	elseif mod.chatactive and (key.name == "escape" or key.name == "enter") then
-		mod.chatactive = false
-		return
-	elseif mod.chatactive then
-		return
-	end
+	if chatactive then return end
 
 	local cl = mod.client
 
@@ -301,8 +287,7 @@ end)
 
 ---@param key keyevent_t
 addHook("KeyUp", function(key)
-	-- !!!! HACK
-	if mod.chatactive then return end
+	if chatactive then return end
 
 	local cl = mod.client
 
