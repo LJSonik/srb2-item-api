@@ -41,15 +41,23 @@ local netCommand_carryInventoryItem = nc.add(function(p, stream)
 	end
 end)
 
+local function getContainerFromAction(action)
+	if not (action and action.type == "ground_item") then return nil end
+	local mo = action.target
+	if not (mo.valid and mo.itemapi_data and mo.itemapi_data.inventory) then return nil end
+	return mo
+end
+
 local netCommand_moveInventoryItemBetweenPlayerAndContainer = nc.add(function(p, stream)
 	local srcIsContainer = (bs.readBit(stream) == 1)
 	local srcIndex = bs.readByte(stream)
 	local dstIsContainer = (bs.readBit(stream) == 1)
 	local dstIndex = bs.readByte(stream)
 
-	local mo = p.itemapi_mobjActionTarget
-	if (srcIsContainer or dstIsContainer) and not (mo and mo.valid) then
-		return
+	local mo
+	if srcIsContainer or dstIsContainer then
+		mo = getContainerFromAction(p.itemapi_action)
+		if not mo then return end
 	end
 
 	---@type itemapi.Inventory
@@ -78,10 +86,8 @@ local netCommand_quickMoveInventoryItemBetweenPlayerAndContainer = nc.add(functi
 	local srcIndex = bs.readByte(stream)
 	local dstIsContainer = not srcIsContainer
 
-	local mo = p.itemapi_mobjActionTarget
-	if not (mo and mo.valid) then
-		return
-	end
+	local mo = getContainerFromAction(p.itemapi_action)
+	if not mo then return end
 
 	---@type itemapi.Inventory
 	local srcInventory = srcIsContainer and mo.itemapi_data.inventory or p.itemapi_inventory
@@ -469,23 +475,6 @@ function Inventory.slot_onTick(slot)
 	end
 end
 
----@param v videolib
----@param def itemapi.ItemDef
-local function cacheItemPatch(v, def)
-	local frameName = R_Frame2Char(def.mobjFrame)
-	local basePatch = sprnames[def.mobjSprite]
-
-	local patchName = basePatch .. frameName .. "0"
-	if not v.patchExists(patchName) then
-		patchName = basePatch .. frameName .. "1"
-	end
-	if not v.patchExists(patchName) then
-		patchName = basePatch .. frameName .. "1" .. frameName .. "5"
-	end
-
-	return v.cachePatch(patchName)
-end
-
 ---@param def itemapi.ItemDef
 ---@param patch patch_t
 local function calculateDefaultIconScale(def, patch)
@@ -589,7 +578,7 @@ end
 function mod.drawInventoryItemStack(v, type, quantity, l, t, selected)
 	local def = mod.itemDefs[type]
 
-	local patch = cacheItemPatch(v, def)
+	local patch = v.getSpritePatch(def.mobjSprite, def.mobjFrame, 1)
 	def.iconScale = $ or calculateDefaultIconScale(def, patch)
 
 	local scale = def.iconScale
