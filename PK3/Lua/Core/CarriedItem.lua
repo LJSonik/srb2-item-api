@@ -57,6 +57,7 @@ function mod.spawnCarriedItemMobj(player, slotID)
 	else
 		mo.sprite = itemDef.mobjSprite
 		mo.frame = itemDef.mobjFrame
+		mo.scale = itemDef.mobjScale or FU
 	end
 
 	if itemDef.onCarry then
