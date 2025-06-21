@@ -16,6 +16,13 @@ local mod = itemapi
 ---@field requiredGroundItem? string
 ---@field condition? fun(): boolean
 ---@field action fun(player: player_t)
+---
+---@field start fun(player: player_t)
+---@field tick fun(player: player_t, actors: player_t[])
+---@field stop fun(player: player_t)
+---
+---@field onActorStart fun(player: player_t)
+---@field onActorStop fun(player: player_t)
 
 ---@class itemapi.GroundItemActionDef : itemapi.ActionDef
 ---@field requiredCarriedItem? string
@@ -23,6 +30,13 @@ local mod = itemapi
 ---@field selectSpot? boolean
 ---@field action fun(player: player_t, mobj: mobj_t, groundItemDef: itemapi.ItemDef, carriedItemDef: itemapi.ItemDef?, spotIndex: integer?)
 ---@field actionV2 fun(action: itemapi.Action, mobj: mobj_t, actors: player_t[])
+---
+---@field start fun(action: itemapi.Action, mobj: mobj_t)
+---@field tick fun(action: itemapi.Action, mobj: mobj_t, actors: player_t[])
+---@field stop fun(action: itemapi.Action, mobj: mobj_t)
+---
+---@field onActorStart fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
+---@field onActorStop fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
 
 ---@class itemapi.MobjActionDef : itemapi.ActionDef
 ---@field mobjType mobjtype_t
@@ -37,9 +51,11 @@ local mod = itemapi
 ---@field type itemapi.ActionType
 ---@field actors player_t[]
 ---@field target? any
+---@field itemType? integer
 ---@field index integer
 ---@field spotIndex? integer
 ---@field progress tic_t
+---@field completed? boolean
 
 ---@class player_t
 ---@field itemapi_action? itemapi.Action
@@ -62,14 +78,11 @@ function mod.getActionDef(action)
 	local actionType = action.type
 
 	if actionType == "carried_item" then
-		local itemDef = mod.itemDefs[mod.getMainCarriedItemType(action.target)]
+		local itemDef = mod.itemDefs[action.itemType]
 		return itemDef and itemDef.actions[action.index]
 	elseif actionType == "ground_item" then
-		local mobj = action.target
-		if not (mobj and mobj.valid) then return nil end
-
-		local groundItemDef = mod.getItemDefFromMobj(mobj)
-		return groundItemDef.groundActions[action.index]
+		local itemDef = mod.itemDefs[action.itemType]
+		return itemDef.groundActions[action.index]
 	elseif actionType == "mobj" then
 		local mobj = action.target
 		if not (mobj and mobj.valid) then return nil end
@@ -138,6 +151,7 @@ function mod.updateActions()
 
 	for i = #actions, 1, -1 do
 		local action = actions[i]
+		local actionDef = mod.getActionDef(action)
 
 		for i = #action.actors, 1, -1 do
 			local actor = action.actors[i]
@@ -150,31 +164,20 @@ function mod.updateActions()
 			action.progress = $ + 1
 		end
 
-		local actionDef = mod.getActionDef(action)
+		if action.despawning then return end
+
+		if actionDef.tick then
+			if action.type == "carried_item" then
+				actionDef.tick(action.target, action.actors)
+			elseif action.type == "ground_item" then
+				actionDef.tick(action, action.target, action.actors)
+			end
+		end
 
 		mod.updateActionAnimation(action)
 
 		if action.progress >= (actionDef.duration or 0) then
-			local actor = mod.randomElement(action.actors)
-
-			if action.type == "carried_item" then
-				actionDef.action(actor, action.groundItem)
-			elseif action.type == "ground_item" then
-				local groundItemDef = mod.getItemDefFromMobj(action.target)
-				local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
-
-				if actionDef.actionV2 then
-					actionDef.actionV2(action, action.target, action.actors)
-				else
-					actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
-				end
-			elseif action.type == "mobj" then
-				actionDef.action(actor, action.target)
-			end
-
-			for i = #action.actors, 1, -1 do
-				mod.stopAction(action.actors[i])
-			end
+			mod.completeAction(action)
 		end
 	end
 end
@@ -188,8 +191,44 @@ function mod.despawnAction(action)
 		mod.stopAction(action.actors[i])
 	end
 
+	local actionDef = mod.getActionDef(action)
+	if actionDef.stop then
+		if action.type == "carried_item" then
+			actionDef.stop(action.target)
+		elseif action.type == "ground_item" then
+			actionDef.stop(action, action.target)
+		end
+	end
+
 	mod.stopActionAnimation(action)
 	mod.removeIndexFromUnorderedArrayAndUpdateField(mod.vars.actions, action.arrayIndex, "arrayIndex")
+end
+
+---@param action itemapi.Action
+function mod.completeAction(action)
+	local actionDef = mod.getActionDef(action)
+	local actor = mod.randomElement(action.actors)
+
+	action.completed = true
+
+	if not actionDef.stop then
+		if action.type == "carried_item" then
+			actionDef.action(actor, action.groundItem)
+		elseif action.type == "ground_item" then
+			local groundItemDef = mod.getItemDefFromMobj(action.target)
+			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
+
+			if actionDef.actionV2 then
+				actionDef.actionV2(action, action.target, action.actors)
+			else
+				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
+			end
+		elseif action.type == "mobj" then
+			actionDef.action(actor, action.target)
+		end
+	end
+
+	mod.despawnAction(action)
 end
 
 function mod.uninitialiseActions()
@@ -369,13 +408,22 @@ function mod.performCarriedItemAction(player, index, groundItem)
 	if actionDef.duration ~= nil then
 		local action = mod.spawnAction("carried_item")
 		action.target = player
+		action.itemType = mod.getMainCarriedItemType(player)
 		action.index = index
 		action.groundItem = groundItem
+
+		if actionDef.start then
+			actionDef.start(action.target)
+		end
 
 		table.insert(action.actors, player)
 		player.itemapi_action = action
 
 		mod.startActionAnimation(action)
+
+		if actionDef.onActorStart then
+			actionDef.onActorStart(action.target)
+		end
 	else
 		actionDef.action(player, groundItem)
 	end
@@ -417,14 +465,23 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 	if not action then
 		action = mod.spawnAction("ground_item")
 		action.target = groundItem
+		action.itemType = groundItemDef.index
 		action.index = actionIndex
 		action.spotIndex = spotIndex
+
+		if actionDef.start then
+			actionDef.start(action, action.target)
+		end
 	end
 
 	table.insert(action.actors, player)
 	player.itemapi_action = action
 
 	mod.startActionAnimation(action)
+
+	if actionDef.onActorStart then
+		actionDef.onActorStart(action, action.target, player)
+	end
 end
 
 ---@param player player_t
@@ -462,6 +519,11 @@ end
 ---@param player player_t
 function mod.stopAction(player)
 	local action = player.itemapi_action
+	local actionDef = mod.getActionDef(action)
+
+	if actionDef.onActorStop then
+		actionDef.onActorStop(action, action.target, player)
+	end
 
 	mod.removeValueFromArray(action.actors, player)
 	player.itemapi_action = nil

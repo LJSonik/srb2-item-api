@@ -78,10 +78,12 @@ function mod.stopActionAnimation(action)
 
 	local mobj
 	if action.type == "carried_item" then
-		mobj = action.target.itemapi_carrySlots["right_hand"].mobj
+		local slot = action.target.itemapi_carrySlots["right_hand"]
+		mobj = slot and slot.mobj or nil
 	else
 		mobj = action.target
 	end
+	if not (mobj and mobj.valid) then return end
 
 	for i, animParams in ipairs(actionDef.animations) do
 		local animDef = mod.actionAnimationDefs[animParams.type]
