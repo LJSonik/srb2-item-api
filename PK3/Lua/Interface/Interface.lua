@@ -106,6 +106,7 @@ function mod.setUIMode(stateType, ...)
 	end
 
 	mod.disableGameKeys()
+	input.ignoregameinputs = (cl.uiActive and not def.allowMovement)
 
 	if def.enter then
 		def.enter(...)
