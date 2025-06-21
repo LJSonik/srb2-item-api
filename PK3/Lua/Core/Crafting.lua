@@ -42,6 +42,21 @@ function RecipeDef:toString()
 	return text
 end
 
+---@param itemType itemapi.ItemType
+---@return integer
+function RecipeDef:countItemType(itemType)
+	local n = 0
+	local itemID = itemapi.itemDefs[itemType].id
+
+	for _, neededIngredient in ipairs(self.ingredients) do
+		if neededIngredient[1] == itemID then
+			n = $ + neededIngredient[2]
+		end
+	end
+
+	return n
+end
+
 ---@param inventory itemapi.Inventory
 ---@return boolean
 function RecipeDef:isCraftableWithInventory(inventory)
