@@ -5,6 +5,7 @@ local mod = itemapi
 ---@class itemapi.ActionDef
 ---@field name string
 ---@field duration? tic_t
+---@field variableDuration? boolean
 ---
 ---@field animations  itemapi.ActionAnimationDef[]
 ---@field animation?  itemapi.ActionAnimationDef
@@ -176,7 +177,7 @@ function mod.updateActions()
 
 		mod.updateActionAnimation(action)
 
-		if action.progress >= (actionDef.duration or 0) then
+		if not actionDef.variableDuration and action.progress >= (actionDef.duration or 0) then
 			mod.completeAction(action)
 		end
 	end
