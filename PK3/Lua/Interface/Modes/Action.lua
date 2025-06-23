@@ -115,7 +115,8 @@ end)
 function mod.getActionDefFromMobj(mobj, actionIndex)
 	local itemDef = mod.getItemDefFromMobj(mobj)
 	if itemDef then
-		return itemDef.groundActions[actionIndex]
+		local actionType = itemDef.groundActions[actionIndex]
+		return actionType and mod.actionDefs[actionType]
 	else
 		local actionDefs = mod.mobjActionDefs[mobj.type]
 		return actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])

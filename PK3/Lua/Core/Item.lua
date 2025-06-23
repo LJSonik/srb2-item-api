@@ -92,20 +92,6 @@ function mod.parseSugarArray(def, arrayName, sugarPrefix)
 	end
 end
 
----@param actionDefs itemapi.ActionDef[]
-local function parseActionDefs(actionDefs)
-	for _, actionDef in ipairs(actionDefs or {}) do
-		mod.parseSugarArray(actionDef, "animations", "animation")
-		actionDef.animations = $ or {}
-
-		for i, anim in ipairs(actionDef.animations) do
-			if type(anim) == "string" then
-				actionDef.animations[i] = { type = anim }
-			end
-		end
-	end
-end
-
 ---@param def itemapi.ItemDef
 local function parseDef(def)
 	if def.description then
@@ -115,13 +101,6 @@ local function parseDef(def)
 	mod.parseSugarArray(def, "actions", "action")
 	mod.parseSugarArray(def, "groundActions", "groundAction")
 	mod.parseSugarArray(def, "groundTickers", "groundTicker")
-
-	if def.actions then
-		parseActionDefs(def.actions)
-	end
-	if def.groundActions then
-		parseActionDefs(def.groundActions)
-	end
 end
 
 ---@param def itemapi.ItemDef
@@ -186,6 +165,18 @@ function mod.addItem(id, def)
 
 	for _, tickerDef in ipairs(def.groundTickers) do
 		mod.register(tickerDef.ticker)
+	end
+
+	local actionDefs = def.actions
+	def.actions = {}
+	for _, actionDef in ipairs(actionDefs or {}) do
+		mod.addItemAction(id, actionDef)
+	end
+
+	local groundActionDefs = def.groundActions
+	def.groundActions = {}
+	for _, actionDef in ipairs(groundActionDefs or {}) do
+		mod.addGroundItemAction(id, actionDef)
 	end
 end
 

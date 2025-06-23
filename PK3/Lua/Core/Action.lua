@@ -2,18 +2,11 @@
 local mod = itemapi
 
 
----@class itemapi.ActionDef
----@field name string
----@field duration? tic_t
----@field variableDuration? boolean
----
----@field animations  itemapi.ActionAnimationDef[]
----@field animation?  itemapi.ActionAnimationDef
----@field animation1? itemapi.ActionAnimationDef
----@field animation2? itemapi.ActionAnimationDef
----@field animation3? itemapi.ActionAnimationDef
+local ljclass = ljrequire "ljclass"
+
 
 ---@class itemapi.ItemActionDef : itemapi.ActionDef
+---@field item string
 ---@field requiredGroundItem? string
 ---@field condition? fun(): boolean
 ---@field action fun(player: player_t)
@@ -26,6 +19,7 @@ local mod = itemapi
 ---@field onActorStop fun(player: player_t)
 
 ---@class itemapi.GroundItemActionDef : itemapi.ActionDef
+---@field item string
 ---@field requiredCarriedItem? string
 ---@field condition? fun(player: player_t, mobj: mobj_t): boolean
 ---@field selectSpot? boolean
@@ -46,18 +40,6 @@ local mod = itemapi
 
 ---@alias itemapi.ActionType "carried_item"|"ground_item"|"mobj"
 
----@class itemapi.Action
----@field arrayIndex integer
----@field despawning? boolean
----@field type itemapi.ActionType
----@field actors player_t[]
----@field target? any
----@field itemType? integer
----@field index integer
----@field spotIndex? integer
----@field progress tic_t
----@field completed? boolean
-
 ---@class player_t
 ---@field itemapi_action? itemapi.Action
 
@@ -66,6 +48,9 @@ local MAX_ACTION_DIST = 128*FU
 local MAX_ACTION_HEIGHT = 96*FU
 
 
+---@type { [string|integer]: itemapi.ActionDef }
+mod.actionDefs = {}
+
 ---@type { [mobjtype_t]: { [statenum_t]: itemapi.MobjActionDef } }
 mod.mobjActionDefs = {}
 
@@ -73,23 +58,62 @@ mod.mobjActionDefs = {}
 ---@field actions itemapi.Action[]
 mod.vars.actions = {}
 
----@param action itemapi.Action
----@return itemapi.ActionDef?
-function mod.getActionDef(action)
-	local actionType = action.type
 
-	if actionType == "carried_item" then
-		local itemDef = mod.itemDefs[action.itemType]
-		return itemDef and itemDef.actions[action.index]
-	elseif actionType == "ground_item" then
-		local itemDef = mod.itemDefs[action.itemType]
-		return itemDef.groundActions[action.index]
-	elseif actionType == "mobj" then
-		local mobj = action.target
-		if not (mobj and mobj.valid) then return nil end
+---@class itemapi.ActionDef : ljclass.Class
+---@field index integer
+---@field name string
+---@field type "carried_item"|"ground_item"
+---
+---@field duration? tic_t
+---@field variableDuration? boolean
+---
+---@field animations  itemapi.ActionAnimationDef[]
+---@field animation?  itemapi.ActionAnimationDef
+---@field animation1? itemapi.ActionAnimationDef
+---@field animation2? itemapi.ActionAnimationDef
+---@field animation3? itemapi.ActionAnimationDef
+local ActionDef = ljclass.localclass()
+mod.ActionDef = ActionDef
 
-		local actionDefs = mod.mobjActionDefs[mobj.type]
-		return actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
+
+---@class itemapi.Action : ljclass.Class
+---@field type integer
+---@field arrayIndex integer
+---@field despawning? boolean
+---@field def itemapi.ActionDef
+---@field type itemapi.ActionType
+---@field actors player_t[]
+---@field target? any
+---@field itemType? integer
+---@field index integer
+---@field spotIndex? integer
+---@field progress tic_t
+---@field completed? boolean
+local Action = ljclass.class()
+mod.Action = Action
+
+
+---@param self itemapi.Action
+ljclass.getter(Action, "def", function(self)
+	return mod.actionDefs[self.type]
+end)
+
+
+---Registers a new action
+---@param def itemapi.ActionDef
+function mod.addAction(def)
+	def = mod.copy(def, ActionDef())
+
+	def.index = #mod.actionDefs + 1
+	mod.actionDefs[def.index] = def
+
+	mod.parseSugarArray(def, "animations", "animation")
+	def.animations = $ or {}
+
+	for i, anim in ipairs(def.animations) do
+		if type(anim) == "string" then
+			def.animations[i] = { type = anim }
+		end
 	end
 end
 
@@ -98,7 +122,10 @@ end
 ---@param def itemapi.ItemActionDef
 function mod.addItemAction(itemID, def)
 	local itemDef = mod.itemDefs[itemID]
-	table.insert(itemDef.actions, def)
+	def.type = "carried_item"
+	def.item = itemID
+	mod.addAction(def)
+	table.insert(itemDef.actions, #mod.actionDefs)
 end
 
 ---Registers a new ground item action
@@ -106,7 +133,10 @@ end
 ---@param def itemapi.GroundItemActionDef
 function mod.addGroundItemAction(itemID, def)
 	local itemDef = mod.itemDefs[itemID]
-	table.insert(itemDef.groundActions, def)
+	def.type = "ground_item"
+	def.item = itemID
+	mod.addAction(def)
+	table.insert(itemDef.groundActions, #mod.actionDefs)
 end
 
 ---Registers a new mobj action
@@ -130,17 +160,16 @@ function mod.addMobjAction(mobjType, def)
 	mobjinfo[mobjType].flags = $ & ~(MF_NOTHINK | MF_NOBLOCKMAP)
 end
 
----@param actionType itemapi.ActionType
+---@param id integer
 ---@return itemapi.Action
-function mod.spawnAction(actionType)
+function mod.spawnAction(id)
 	local index = #mod.vars.actions + 1
 
-	local action = {
-		arrayIndex = index,
-		type = actionType,
-		actors = {},
-		progress = 0
-	}
+	local action = Action()
+	action.defType = id
+	action.arrayIndex = index
+	action.actors = {}
+	action.progress = 0
 
 	mod.vars.actions[index] = action
 
@@ -152,7 +181,7 @@ function mod.updateActions()
 
 	for i = #actions, 1, -1 do
 		local action = actions[i]
-		local actionDef = mod.getActionDef(action)
+		local actionDef = action.def
 
 		for i = #action.actors, 1, -1 do
 			local actor = action.actors[i]
@@ -168,9 +197,9 @@ function mod.updateActions()
 		if action.despawning then return end
 
 		if actionDef.tick then
-			if action.type == "carried_item" then
+			if actionDef.type == "carried_item" then
 				actionDef.tick(action.target, action.actors)
-			elseif action.type == "ground_item" then
+			elseif actionDef.type == "ground_item" then
 				actionDef.tick(action, action.target, action.actors)
 			end
 		end
@@ -192,11 +221,11 @@ function mod.despawnAction(action)
 		mod.stopAction(action.actors[i])
 	end
 
-	local actionDef = mod.getActionDef(action)
+	local actionDef = action.def
 	if actionDef.stop then
-		if action.type == "carried_item" then
+		if actionDef.type == "carried_item" then
 			actionDef.stop(action.target)
-		elseif action.type == "ground_item" then
+		elseif actionDef.type == "ground_item" then
 			actionDef.stop(action, action.target)
 		end
 	end
@@ -207,15 +236,15 @@ end
 
 ---@param action itemapi.Action
 function mod.completeAction(action)
-	local actionDef = mod.getActionDef(action)
+	local actionDef = action.def
 	local actor = mod.randomElement(action.actors)
 
 	action.completed = true
 
 	if not actionDef.stop then
-		if action.type == "carried_item" then
+		if actionDef.type == "carried_item" then
 			actionDef.action(actor, action.groundItem)
-		elseif action.type == "ground_item" then
+		elseif actionDef.type == "ground_item" then
 			local groundItemDef = mod.getItemDefFromMobj(action.target)
 			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
 
@@ -224,7 +253,7 @@ function mod.completeAction(action)
 			else
 				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
 			end
-		elseif action.type == "mobj" then
+		elseif actionDef.type == "mobj" then
 			actionDef.action(actor, action.target)
 		end
 	end
@@ -248,7 +277,9 @@ function mod.findAvailableActions(player, mobj)
 	local groundItemID = mobj and mod.getItemIDFromMobj(mobj)
 
 	if carriedItemDef then
-		for i, actionDef in ipairs(carriedItemDef.actions) do
+		for i, actionType in ipairs(carriedItemDef.actions) do
+			local actionDef = mod.actionDefs[actionType]
+
 			if actionDef.requiredGroundItem and not mod.doesItemMatchSelector(groundItemDefID, actionDef.requiredGroundItem) then
 				continue
 			end
@@ -275,7 +306,9 @@ function mod.findAvailableActions(player, mobj)
 		if groundItemID then
 			local groundItemDef = mod.itemDefs[groundItemID]
 
-			for i, actionDef in ipairs(groundItemDef.groundActions) do
+			for i, actionType in ipairs(groundItemDef.groundActions) do
+				local actionDef = mod.actionDefs[actionType]
+
 				local carriedItemID = carriedItemDef and carriedItemDef.id
 				if actionDef.requiredCarriedItem and not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem)
 				or actionDef.condition and not actionDef.condition(player, mobj) then
@@ -302,7 +335,9 @@ function mod.canPlayerPerformActionsOnMobj(player, mobj)
 	local groundItemID = mobj and mod.getItemIDFromMobj(mobj)
 
 	if carriedItemDef then
-		for _, actionDef in ipairs(carriedItemDef.actions) do
+		for _, actionType in ipairs(carriedItemDef.actions) do
+			local actionDef = mod.actionDefs[actionType]
+
 			if not actionDef.requiredGroundItem or mod.doesItemMatchSelector(groundItemID, actionDef.requiredGroundItem) then
 				return true
 			end
@@ -322,7 +357,9 @@ function mod.canPlayerPerformActionsOnMobj(player, mobj)
 			return true
 		end
 
-		for _, actionDef in ipairs(groundItemDef.groundActions) do
+		for _, actionType in ipairs(groundItemDef.groundActions) do
+			local actionDef = mod.actionDefs[actionType]
+
 			local carriedItemID = carriedItemDef and carriedItemDef.id
 			if not actionDef.requiredCarriedItem or mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem) then
 				return true
@@ -337,15 +374,13 @@ end
 ---@return boolean
 function mod.canPlayerContinueAction(player)
 	local action = player.itemapi_action
+	local actionDef = action.def
 
 	local pmo = player.mo
 	if not pmo then return false end
 
-	if action.type == "carried_item" then
-		local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
-		if not carriedItemDef then return false end
-
-		local actionDef = carriedItemDef.actions[action.index]
+	if actionDef.type == "carried_item" then
+		---@cast actionDef itemapi.ItemActionDef
 
 		if actionDef.requiredGroundItem then
 			local groundItem = action.groundItem
@@ -359,15 +394,14 @@ function mod.canPlayerContinueAction(player)
 				return false
 			end
 		end
-	elseif action.type == "ground_item" then
+	elseif actionDef.type == "ground_item" then
+		---@cast actionDef itemapi.GroundItemActionDef
+
 		local mobj = action.target
 		if not mobj.valid then return false end
 
 		local dist = R_PointToDist2(pmo.x, pmo.y, mobj.x, mobj.y)
 		if dist > MAX_ACTION_DIST then return false end
-
-		local groundItemDef = mod.getItemDefFromMobj(mobj)
-		local actionDef = groundItemDef.groundActions[action.index]
 
 		if actionDef.requiredCarriedItem then
 			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
@@ -377,7 +411,7 @@ function mod.canPlayerContinueAction(player)
 				return false
 			end
 		end
-	elseif action.type == "mobj" then
+	elseif actionDef.type == "mobj" then
 		local mobj = action.target
 		if not mobj.valid then return false end
 
@@ -395,8 +429,9 @@ function mod.performCarriedItemAction(player, index, groundItem)
 	local itemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 	if not itemDef then return end
 
-	local actionDef = itemDef.actions[index]
-	if not actionDef then return end
+	local actionType = itemDef.actions[index]
+	if not actionType then return end
+	local actionDef = mod.actionDefs[actionType]
 
 	local groundItemID = mobj and mod.getItemIDFromMobj(mobj)
 	local requiredID = actionDef.requiredGroundItem
@@ -407,7 +442,7 @@ function mod.performCarriedItemAction(player, index, groundItem)
 	end
 
 	if actionDef.duration ~= nil then
-		local action = mod.spawnAction("carried_item")
+		local action = mod.spawnAction(actionType)
 		action.target = player
 		action.itemType = mod.getMainCarriedItemType(player)
 		action.index = index
@@ -440,8 +475,9 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 	local groundItemDef = mod.getItemDefFromMobj(groundItem)
 	if not groundItemDef then return end
 
-	local actionDef = groundItemDef.groundActions[actionIndex]
-	if not actionDef then return end
+	local actionType = groundItemDef.groundActions[actionIndex]
+	if not actionType then return end
+	local actionDef = mod.actionDefs[actionType]
 
 	local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 	local carriedItemID = carriedItemDef and carriedItemDef.id
@@ -464,7 +500,7 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 
 	-- Spawn a new action if one didn't exist for this ground item yet
 	if not action then
-		action = mod.spawnAction("ground_item")
+		action = mod.spawnAction(actionType)
 		action.target = groundItem
 		action.itemType = groundItemDef.index
 		action.index = actionIndex
@@ -504,7 +540,7 @@ function mod.performMobjAction(player, index, mobj)
 
 		-- Spawn a new action if one didn't exist for this ground item yet
 		if not action then
-			action = mod.spawnAction("mobj")
+			action = mod.spawnAction(actionDef.index)
 			action.target = mobj
 		end
 
@@ -520,7 +556,7 @@ end
 ---@param player player_t
 function mod.stopAction(player)
 	local action = player.itemapi_action
-	local actionDef = mod.getActionDef(action)
+	local actionDef = action.def
 
 	if actionDef.onActorStop then
 		actionDef.onActorStop(action, action.target, player)

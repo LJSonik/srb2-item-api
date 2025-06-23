@@ -42,7 +42,7 @@ local netCommand_carryInventoryItem = nc.add(function(p, stream)
 end)
 
 local function getContainerFromAction(action)
-	if not (action and action.type == "ground_item") then return nil end
+	if not (action and action.def.type == "ground_item") then return nil end
 	local mo = action.target
 	if not (mo.valid and mo.itemapi_data and mo.itemapi_data.inventory) then return nil end
 	return mo
