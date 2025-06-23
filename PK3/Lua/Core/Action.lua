@@ -345,7 +345,7 @@ function mod.canPlayerContinueAction(player)
 		local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 		if not carriedItemDef then return false end
 
-		local actionDef = carriedItemDef.actions
+		local actionDef = carriedItemDef.actions[action.index]
 
 		if actionDef.requiredGroundItem then
 			local groundItem = action.groundItem
