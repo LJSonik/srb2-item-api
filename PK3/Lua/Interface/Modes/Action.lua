@@ -58,6 +58,15 @@ local netCommand_performGroundItemAction = nc.add(function(p, stream)
 	mod.performGroundItemAction(p, actionIndex, mo, spotIndex)
 end)
 
+local netCommand_performFOFAction = nc.add(function(p, stream)
+	local actionIndex = bs.readByte(stream)
+
+	local aimedFOF = mod.findAimedFOF(p)
+	if not aimedFOF then return end
+
+	mod.performFOFAction(p, actionIndex, aimedFOF)
+end)
+
 local netCommand_storeCarriedItem = nc.add(function(p)
 	local slot = p.itemapi_carrySlots["right_hand"]
 	if not slot then return end
@@ -181,6 +190,8 @@ function mod.sendActionNetCommand(availableActionIndex, spotIndex)
 		netCommandID = netCommand_performCarriedItemAction
 	elseif availableAction.type == "ground_item" then
 		netCommandID = netCommand_performGroundItemAction
+	elseif availableAction.type == "fof" then
+		netCommandID = netCommand_performFOFAction
 	end
 
 	local stream = nc.prepare(netCommandID)

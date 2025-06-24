@@ -33,7 +33,26 @@ local ljclass = ljrequire "ljclass"
 ---@field onActorStart fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
 ---@field onActorStop fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
 
----@alias itemapi.ActionType "carried_item"|"ground_item"
+---@class itemapi.FOFActionDef : itemapi.ActionDef
+---@field item string
+---@field requiredCarriedItem? string
+---@field condition? fun(player: player_t, aimedFOF: itemapi.AimedFOF): boolean
+---@field action fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF, actors: player_t[])
+---
+---@field start fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF)
+---@field tick fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF, actors: player_t[])
+---@field stop fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF)
+---
+---@field onActorStart fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF, actor: player_t)
+---@field onActorStop fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF, actor: player_t)
+
+---@alias itemapi.ActionType "carried_item"|"ground_item"|"fof"
+
+---@class itemapi.AimedFOF
+---@field fof ffloor_t
+---@field x fixed_t
+---@field y fixed_t
+---@field z fixed_t
 
 ---@class player_t
 ---@field itemapi_action? itemapi.Action
@@ -46,6 +65,9 @@ local MAX_ACTION_HEIGHT = 96*FU
 ---@type { [string|integer]: itemapi.ActionDef }
 mod.actionDefs = {}
 
+---@type { [string]: integer[] }
+mod.fofActionDefs = {}
+
 ---@class itemapi.Vars
 ---@field actions itemapi.Action[]
 mod.vars.actions = {}
@@ -54,7 +76,7 @@ mod.vars.actions = {}
 ---@class itemapi.ActionDef : ljclass.Class
 ---@field index integer
 ---@field name string
----@field type "carried_item"|"ground_item"
+---@field type "carried_item"|"ground_item"|"fof"
 ---
 ---@field duration? tic_t
 ---@field variableDuration? boolean
@@ -76,6 +98,7 @@ mod.ActionDef = ActionDef
 ---@field actors player_t[]
 ---@field target? any
 ---@field itemType? integer
+---@field materialID? string
 ---@field index integer
 ---@field spotIndex? integer
 ---@field progress tic_t
@@ -130,6 +153,18 @@ function mod.addGroundItemAction(itemID, def)
 	table.insert(itemDef.groundActions, #mod.actionDefs)
 end
 
+---Registers a new FOF action
+---@param materialID string
+---@param def itemapi.FOFActionDef
+function mod.addFOFAction(materialID, def)
+	def.type = "fof"
+	def.material = materialID
+	mod.addAction(def)
+
+	mod.fofActionDefs[materialID] = $ or {}
+	table.insert(mod.fofActionDefs[materialID], #mod.actionDefs)
+end
+
 ---@param id integer
 ---@return itemapi.Action
 function mod.spawnAction(id)
@@ -171,6 +206,8 @@ function mod.updateActions()
 				actionDef.tick(action.target, action.actors)
 			elseif actionDef.type == "ground_item" then
 				actionDef.tick(action, action.target, action.actors)
+			elseif actionDef.type == "fof" then
+				actionDef.tick(action, action.target, action.actors)
 			end
 		end
 
@@ -196,6 +233,8 @@ function mod.despawnAction(action)
 		if actionDef.type == "carried_item" then
 			actionDef.stop(action.target)
 		elseif actionDef.type == "ground_item" then
+			actionDef.stop(action, action.target)
+		elseif actionDef.type == "fof" then
 			actionDef.stop(action, action.target)
 		end
 	end
@@ -223,6 +262,8 @@ function mod.completeAction(action)
 			else
 				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
 			end
+		elseif actionDef.type == "fof" then
+			actionDef.action(action, action.target, action.actors)
 		end
 	end
 
@@ -275,6 +316,24 @@ function mod.findAvailableActions(player, mobj)
 
 				table.insert(availableActions, {
 					type = "ground_item",
+					index = i,
+					def = actionDef
+				})
+			end
+		end
+	end
+
+	local aimedFOF = mod.findAimedFOF(player)
+	if aimedFOF then
+		local materialID = mod.textureToSurfaceMaterial[aimedFOF.fof.toppic]
+		local actionTypes = mod.fofActionDefs[materialID]
+
+		if actionTypes then
+			for i, actionType in ipairs(actionTypes) do
+				local actionDef = mod.actionDefs[actionType]
+
+				table.insert(availableActions, {
+					type = "fof",
 					index = i,
 					def = actionDef
 				})
@@ -353,6 +412,23 @@ function mod.canPlayerContinueAction(player)
 		if not mobj.valid then return false end
 
 		local dist = R_PointToDist2(pmo.x, pmo.y, mobj.x, mobj.y)
+		if dist > MAX_ACTION_DIST then return false end
+
+		if actionDef.requiredCarriedItem then
+			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
+			local carriedItemID = carriedItemDef and carriedItemDef.id
+
+			if not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem) then
+				return false
+			end
+		end
+	elseif actionDef.type == "fof" then
+		---@cast actionDef itemapi.FOFActionDef
+
+		local aimedFOF = action.target
+		if not aimedFOF.fof.valid then return false end
+
+		local dist = R_PointToDist2(pmo.x, pmo.y, aimedFOF.x, aimedFOF.y)
 		if dist > MAX_ACTION_DIST then return false end
 
 		if actionDef.requiredCarriedItem then
@@ -468,6 +544,50 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 end
 
 ---@param player player_t
+---@param actionIndex integer
+---@param aimedFOF itemapi.AimedFOF
+function mod.performFOFAction(player, actionIndex, aimedFOF)
+	if not aimedFOF then return end
+
+	local materialID = mod.textureToSurfaceMaterial[aimedFOF.fof.toppic]
+	if not (materialID and mod.fofActionDefs[materialID]) then return end
+
+	local actionType = mod.fofActionDefs[materialID][actionIndex]
+	if not actionType then return end
+	local actionDef = mod.actionDefs[actionType] ---@type itemapi.FOFActionDef
+
+	local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
+	local carriedItemID = carriedItemDef and carriedItemDef.id
+
+	local requiredID = actionDef.requiredCarriedItem
+	if requiredID and not mod.doesItemMatchSelector(carriedItemID, requiredID) then return end
+
+	if actionDef.condition and not actionDef.condition(player, aimedFOF) then return end
+
+	if player.itemapi_action then
+		mod.stopAction(player)
+	end
+
+	local action = mod.spawnAction(actionType)
+	action.target = aimedFOF
+	action.materialID = materialID
+	action.index = actionIndex
+
+	if actionDef.start then
+		actionDef.start(action, aimedFOF)
+	end
+
+	table.insert(action.actors, player)
+	player.itemapi_action = action
+
+	mod.startActionAnimation(action)
+
+	if actionDef.onActorStart then
+		actionDef.onActorStart(action, action.target, player)
+	end
+end
+
+---@param player player_t
 function mod.stopAction(player)
 	local action = player.itemapi_action
 	local actionDef = action.def
@@ -532,4 +652,44 @@ function mod.findAimedMobj(player)
 	end, player.mo, x1, x2, y1, y2)
 
 	return bestMobj
+end
+
+---@param player player_t
+---@return itemapi.AimedFOF?
+function mod.findAimedFOF(player)
+	local playerMobj = player.mo
+	if not playerMobj then return nil end
+
+	local maxDist = MAX_ACTION_DIST
+	local maxHeight = MAX_ACTION_HEIGHT
+
+	local x = playerMobj.x
+	local y = playerMobj.y
+	local z = playerMobj.z + playerMobj.height * 2 / 3
+	local minZ, maxZ = z - maxHeight, z + maxHeight
+
+	local stepDist = 16*FU
+	local dx = FixedMul(cos(playerMobj.angle), stepDist)
+	local dy = FixedMul(sin(playerMobj.angle), stepDist)
+
+	for _ = 0, maxDist, stepDist do
+		local s = R_PointInSubsector(x, y).sector
+
+		for fof in s.ffloors() do
+			local fofTop = P_GetZAt(fof.t_slope, x, y, fof.topheight)
+			local fofBottom = P_GetZAt(fof.b_slope, x, y, fof.bottomheight)
+
+			if minZ <= fofTop and maxZ >= fofBottom
+			and fofTop >= P_GetZAt(s.f_slope, x, y, s.floorheight) -- FOF above the ground?
+			and fof.flags & FF_SWIMMABLE then
+				z = min(max(z, fofBottom), fofTop)
+				return { fof=fof, x=x, y=y, z=z }
+			end
+		end
+
+		x = x + dx
+		y = y + dy
+	end
+
+	return nil
 end
