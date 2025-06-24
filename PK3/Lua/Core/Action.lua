@@ -488,7 +488,7 @@ end
 ---@return mobj_t?
 function mod.findAimedMobj(player)
 	local playerMobj = player.mo
-	if not playerMobj then return end
+	if not playerMobj then return nil end
 
 	local playerAngle = playerMobj.angle
 
@@ -505,20 +505,20 @@ function mod.findAimedMobj(player)
 	searchBlockmap("objects", function(_, mo)
 		local mx, my, mz = mo.x, mo.y, mo.z
 
-		if not (mz > z1 and mz < z2) then return end
+		if not (mz > z1 and mz < z2) then return nil end
 
 		local dist = R_PointToDist2(x, y, mx, my)
-		if not (dist < maxDist and mo ~= playerMobj) then return end
+		if not (dist < maxDist and mo ~= playerMobj) then return nil end
 
 		local angle = abs(playerAngle - R_PointToAngle2(x, y, mx, my))
-		if angle >= maxAngle then return end
+		if angle >= maxAngle then return nil end
 
 		local mt = mo.type
 		local state = mo.state
 		local stateToItemType = mod.mobjToItemType[mt]
-		if not (stateToItemType and (stateToItemType[state] or stateToItemType[S_NULL])) then return end
+		if not (stateToItemType and (stateToItemType[state] or stateToItemType[S_NULL])) then return nil end
 
-		if not mod.canPlayerPerformActionsOnMobj(player, mo) then return end
+		if not mod.canPlayerPerformActionsOnMobj(player, mo) then return nil end
 
 		-- Use some basic heuristic to determine if that mobj
 		-- if more likely to be the one the player is interested in
