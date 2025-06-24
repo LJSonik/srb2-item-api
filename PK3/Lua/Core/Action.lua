@@ -33,12 +33,7 @@ local ljclass = ljrequire "ljclass"
 ---@field onActorStart fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
 ---@field onActorStop fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
 
----@class itemapi.MobjActionDef : itemapi.ActionDef
----@field mobjType mobjtype_t
----@field state? statenum_t
----@field action fun(player: player_t, mobj: mobj_t)
-
----@alias itemapi.ActionType "carried_item"|"ground_item"|"mobj"
+---@alias itemapi.ActionType "carried_item"|"ground_item"
 
 ---@class player_t
 ---@field itemapi_action? itemapi.Action
@@ -50,9 +45,6 @@ local MAX_ACTION_HEIGHT = 96*FU
 
 ---@type { [string|integer]: itemapi.ActionDef }
 mod.actionDefs = {}
-
----@type { [mobjtype_t]: { [statenum_t]: itemapi.MobjActionDef } }
-mod.mobjActionDefs = {}
 
 ---@class itemapi.Vars
 ---@field actions itemapi.Action[]
@@ -81,7 +73,6 @@ mod.ActionDef = ActionDef
 ---@field arrayIndex integer
 ---@field despawning? boolean
 ---@field def itemapi.ActionDef
----@field type itemapi.ActionType
 ---@field actors player_t[]
 ---@field target? any
 ---@field itemType? integer
@@ -139,34 +130,13 @@ function mod.addGroundItemAction(itemID, def)
 	table.insert(itemDef.groundActions, #mod.actionDefs)
 end
 
----Registers a new mobj action
----@param mobjType mobjtype_t
----@param def itemapi.MobjActionDef
-function mod.addMobjAction(mobjType, def)
-	def.mobjType = mobjType
-	mod.mobjActionDefs[mobjType] = $ or {}
-	mod.mobjActionDefs[mobjType][def.state or S_NULL] = def
-
-	mod.parseSugarArray(def, "animations", "animation")
-
-	for i, anim in ipairs(def.animations) do
-		if type(anim) == "string" then
-			def.animations[i] = { type = anim }
-		end
-	end
-
-	-- Required to ensure the mobjs are synced in servers
-	-- and can be detected when searching for nearby objects
-	mobjinfo[mobjType].flags = $ & ~(MF_NOTHINK | MF_NOBLOCKMAP)
-end
-
 ---@param id integer
 ---@return itemapi.Action
 function mod.spawnAction(id)
 	local index = #mod.vars.actions + 1
 
 	local action = Action()
-	action.defType = id
+	action.type = id
 	action.arrayIndex = index
 	action.actors = {}
 	action.progress = 0
@@ -253,8 +223,6 @@ function mod.completeAction(action)
 			else
 				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
 			end
-		elseif actionDef.type == "mobj" then
-			actionDef.action(actor, action.target)
 		end
 	end
 
@@ -293,16 +261,6 @@ function mod.findAvailableActions(player, mobj)
 	end
 
 	if mobj then
-		local actionDefs = mod.mobjActionDefs[mobj.type]
-		local actionDef = actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
-		if actionDef and not carriedItemDef then
-			table.insert(availableActions, {
-				type = "mobj",
-				index = 1,
-				def = actionDef
-			})
-		end
-
 		if groundItemID then
 			local groundItemDef = mod.itemDefs[groundItemID]
 
@@ -342,12 +300,6 @@ function mod.canPlayerPerformActionsOnMobj(player, mobj)
 				return true
 			end
 		end
-	end
-
-	local actionDefs = mod.mobjActionDefs[mobj.type]
-	local actionDef = actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
-	if actionDef and not carriedItemDef then
-		return true
 	end
 
 	if groundItemID then
@@ -411,12 +363,6 @@ function mod.canPlayerContinueAction(player)
 				return false
 			end
 		end
-	elseif actionDef.type == "mobj" then
-		local mobj = action.target
-		if not mobj.valid then return false end
-
-		local dist = R_PointToDist2(pmo.x, pmo.y, mobj.x, mobj.y)
-		if dist > MAX_ACTION_DIST then return false end
 	end
 
 	return true
@@ -522,38 +468,6 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 end
 
 ---@param player player_t
----@param index integer
----@param mobj mobj_t
-function mod.performMobjAction(player, index, mobj)
-	if not mobj then return end
-
-	local actionDefs = mod.mobjActionDefs[mobj.type]
-	local actionDef = actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
-	if not actionDef then return end
-
-	if player.itemapi_action then
-		mod.stopAction(player)
-	end
-
-	if actionDef.duration ~= nil then
-		local action = mod.findElementInArrayByFieldValue(mod.vars.actions, "target", mobj)
-
-		-- Spawn a new action if one didn't exist for this ground item yet
-		if not action then
-			action = mod.spawnAction(actionDef.index)
-			action.target = mobj
-		end
-
-		table.insert(action.actors, player)
-		player.itemapi_action = action
-
-		mod.startActionAnimation(action)
-	else
-		actionDef.action(player, mobj)
-	end
-end
-
----@param player player_t
 function mod.stopAction(player)
 	local action = player.itemapi_action
 	local actionDef = action.def
@@ -602,12 +516,7 @@ function mod.findAimedMobj(player)
 		local mt = mo.type
 		local state = mo.state
 		local stateToItemType = mod.mobjToItemType[mt]
-		if not (stateToItemType and (stateToItemType[state] or stateToItemType[S_NULL])) then
-			local stateToActionDef = mod.mobjActionDefs[mt]
-			if not (stateToActionDef and (stateToActionDef[state] or stateToActionDef[S_NULL])) then
-				return
-			end
-		end
+		if not (stateToItemType and (stateToItemType[state] or stateToItemType[S_NULL])) then return end
 
 		if not mod.canPlayerPerformActionsOnMobj(player, mo) then return end
 

@@ -58,15 +58,6 @@ local netCommand_performGroundItemAction = nc.add(function(p, stream)
 	mod.performGroundItemAction(p, actionIndex, mo, spotIndex)
 end)
 
-local netCommand_performMobjAction = nc.add(function(p, stream)
-	local actionIndex = bs.readByte(stream)
-
-	local mo = p.itemapi_mobjActionTarget
-	if not (mo and mo.valid) then return end
-
-	mod.performMobjAction(p, actionIndex, mo)
-end)
-
 local netCommand_storeCarriedItem = nc.add(function(p)
 	local slot = p.itemapi_carrySlots["right_hand"]
 	if not slot then return end
@@ -111,16 +102,13 @@ end)
 
 ---@param mobj mobj_t
 ---@param actionIndex integer
----@return itemapi.GroundItemActionDef|itemapi.MobjActionDef|nil
+---@return itemapi.GroundItemActionDef?
 function mod.getActionDefFromMobj(mobj, actionIndex)
 	local itemDef = mod.getItemDefFromMobj(mobj)
-	if itemDef then
-		local actionType = itemDef.groundActions[actionIndex]
-		return actionType and mod.actionDefs[actionType]
-	else
-		local actionDefs = mod.mobjActionDefs[mobj.type]
-		return actionDefs and (actionDefs[mobj.state] or actionDefs[S_NULL])
-	end
+	if not itemDef then return nil end
+
+	local actionType = itemDef.groundActions[actionIndex]
+	return actionType and mod.actionDefs[actionType]
 end
 
 ---@return boolean
@@ -193,8 +181,6 @@ function mod.sendActionNetCommand(availableActionIndex, spotIndex)
 		netCommandID = netCommand_performCarriedItemAction
 	elseif availableAction.type == "ground_item" then
 		netCommandID = netCommand_performGroundItemAction
-	elseif availableAction.type == "mobj" then
-		netCommandID = netCommand_performMobjAction
 	end
 
 	local stream = nc.prepare(netCommandID)
