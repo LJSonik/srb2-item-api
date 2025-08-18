@@ -69,7 +69,7 @@ function CraftingWindow:__init(props)
 		movable = false,
 		resizable = false,
 
-		autoLayout = "OnePerLine",
+		layout = "one_per_line",
 		onKeyPress = self.onKeyPress
 	})
 
@@ -88,7 +88,7 @@ function CraftingWindow:__init(props)
 			var_recipeType = recipe.index,
 
 			text = ("%s (%s)"):format(itemDef.name, recipe:toString()),
-			autoWidth = "FitParent",
+			autoWidth = "fit_parent",
 			margin = 2*FU,
 
 			onTrigger = CraftingWindow.element_onTrigger,
@@ -130,7 +130,7 @@ mod.addMenu("crafting", {
 	build = function()
 		---@type itemapi.CraftingWindow
 		return mod.CraftingWindow {
-			autoPosition = "Center",
+			autoPosition = "center",
 
 			onChange = function(_, recipeIndex)
 				startCrafting(recipeIndex)

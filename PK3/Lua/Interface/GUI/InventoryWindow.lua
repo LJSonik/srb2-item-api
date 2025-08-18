@@ -558,7 +558,7 @@ function Inventory:__init(props)
 		movable = false,
 		resizable = false,
 
-		autoLayout = "Flow",
+		layout = "flow",
 		style = windowStyle,
 		onKeyPress = self.onKeyPress,
 
@@ -611,7 +611,7 @@ mod.addMenu("inventory", {
 		---@type itemapi.InventoryWindow
 		return mod.InventoryWindow {
 			inventory = consoleplayer.itemapi_inventory,
-			autoPosition = "Center"
+			autoPosition = "center"
 		}
 	end,
 

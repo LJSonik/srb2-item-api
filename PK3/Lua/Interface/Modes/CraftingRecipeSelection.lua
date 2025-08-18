@@ -44,7 +44,7 @@ mod.addUIMode("crafting_recipe_selection", {
 		local craftingWindow = mod.CraftingWindow {
 			var_location = location,
 
-			autoPosition = "Center",
+			autoPosition = "center",
 
 			onChange = function(_, recipeIndex)
 				local stream = nc.prepare(netCommand_selectRecipe)

@@ -50,7 +50,7 @@ function Stats:__init(props)
 		movable = false,
 		resizable = false,
 
-		autoLayout = "Flow",
+		layout = "flow",
 		style = windowStyle
 	})
 

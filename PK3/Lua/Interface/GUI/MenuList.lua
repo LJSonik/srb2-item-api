@@ -80,8 +80,8 @@ function MenuList:__init(props)
 	end
 
 	base.__init(self, {
-		autoLayout = "OnePerLine",
-		autoSize = "FitChildren",
+		layout = "one_per_line",
+		autoSize = "fit_children",
 		onKeyPress = self.onKeyPress,
 
 		children = children

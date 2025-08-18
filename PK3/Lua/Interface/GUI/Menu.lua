@@ -172,9 +172,10 @@ mod.addUIMode("menu", {
 	enter = function()
 		---@type itemapi.MenuListUI
 		local menuList = mod.MenuListUI {
-			autoLeft = "SnapToParentRight",
-			autoTop = "Center",
-			snapDist = 8*FU
+			autoLeft = "snap_to_parent_right",
+			autoLeft_snapDist = 8*FU,
+
+			autoTop = "center",
 		}
 
 		menuList:attach(gui.root)

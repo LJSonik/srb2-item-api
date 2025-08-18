@@ -245,7 +245,7 @@ local function makeLine(cmd, grid, children)
 
 	-- table.insert(children, gui.Button {
 	-- 	text = ("%s: %s %s"):format(cmd.name, cmd.inputType, cmd.key:upper()),
-	-- 	autoWidth = "FitParent",
+	-- 	autoWidth = "fit_parent",
 	-- 	margin = 2*FU,
 	-- })
 end
@@ -258,8 +258,9 @@ function ControlOptionsWindow:__init(props)
 
 	self.grid = gui.Grid {
 		fitParent = true,
-		autoLayout = "Grid",
-		gridColumns = 3,
+
+		layout = "grid",
+		layout_gridColumns = 3,
 
 		onKeyPress = onKeyPress,
 
@@ -268,7 +269,7 @@ function ControlOptionsWindow:__init(props)
 
 	base.__init(self, {
 		size = { 256*FU, 160*FU },
-		autoLayout = "OnePerLine",
+		layout = "one_per_line",
 
 		movable = false,
 		resizable = false,
@@ -288,9 +289,10 @@ mod.addMenu("control_options", {
 	build = function()
 		---@type itemapi.ControlOptionsWindow
 		return mod.ControlOptionsWindow {
-			autoLeft = "SnapToParentLeft",
-			autoTop = "Center",
-			snapDist = 8*FU
+			autoLeft = "snap_to_parent_left",
+			autoLeft_snapDist = 8*FU,
+
+			autoTop = "center",
 		}
 	end,
 

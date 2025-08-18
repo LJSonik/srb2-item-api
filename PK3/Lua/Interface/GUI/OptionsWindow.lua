@@ -77,8 +77,9 @@ function OptionsWindow:__init(props)
 
 	self.grid = gui.Grid {
 		fitParent = true,
-		autoLayout = "Grid",
-		gridColumns = 2,
+
+		layout = "grid",
+		layout_gridColumns = 2,
 
 		onKeyPress = onKeyPress,
 
@@ -87,7 +88,7 @@ function OptionsWindow:__init(props)
 
 	base.__init(self, {
 		size = { 256*FU, 160*FU },
-		autoLayout = "OnePerLine",
+		layout = "one_per_line",
 
 		movable = false,
 		resizable = false,
@@ -96,8 +97,8 @@ function OptionsWindow:__init(props)
 		gui.VerticalScrollbar {
 			target = self.grid,
 
-			autoHeight = "FitParent",
-			autoLeft = "SnapToParentRight"
+			autoHeight = "fit_parent",
+			autoLeft = "snap_to_parent_right"
 		}
 	})
 
@@ -113,9 +114,10 @@ mod.addMenu("options", {
 	build = function()
 		---@type itemapi.OptionsWindow
 		return mod.OptionsWindow {
-			autoLeft = "SnapToParentLeft",
-			autoTop = "Center",
-			snapDist = 8*FU
+			autoLeft = "snap_to_parent_left",
+			autoLeft_snapDist = 8*FU,
+
+			autoTop = "center",
 		}
 	end,
 
