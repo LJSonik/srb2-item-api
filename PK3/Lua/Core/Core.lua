@@ -81,6 +81,7 @@ function mod.initialisePlayer(p)
 	p.itemapi_carrySlots = {}
 	p.itemapi_inventory = mod.Inventory(8, 4)
 	p.itemapi_hunger = mod.MAX_HUNGER
+	p.itemapi_thirst = mod.MAX_THIRST
 	p.itemapi_infoBubbles = {}
 
 	p.itemapi_initialised = true
@@ -165,6 +166,7 @@ addHook("ThinkFrame", function()
 
 		mod.updateCarriedItems(p)
 		mod.updateHunger(p)
+		mod.updateThirst(p)
 		mod.updateInfoBubbles(p)
 	end
 
@@ -197,6 +199,7 @@ end)
 addHook("PlayerSpawn", function(p)
 	if p.itemapi_initialised then
 		p.itemapi_hunger = mod.MAX_HUNGER / 4
+		p.itemapi_thirst = mod.MAX_THIRST / 4
 	else
 		mod.initialisePlayer(p)
 	end

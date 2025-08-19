@@ -26,6 +26,7 @@ mod.StatsWindow = Stats
 local function drawStats(item, v)
 	local x, y = item.cachedLeft, item.cachedTop
 	local hunger = FixedMul(FixedDiv(consoleplayer.itemapi_hunger, mod.MAX_HUNGER), 100)
+	local thirst = FixedMul(FixedDiv(consoleplayer.itemapi_thirst, mod.MAX_THIRST), 100)
 
 	local padding = 2*FU
 	x = x + padding
@@ -40,6 +41,18 @@ local function drawStats(item, v)
 
 	gui.drawString(v, x, y, "Hunger")
 	gui.drawString(v, barX + 10*FU, y, hunger .. "%")
+	y = y + 5*FU
+
+	-- Thirst bar
+	local barX = x + 26*FU
+	local barWidth = 32*FU
+	local filledBarWidth = thirst * barWidth / 100
+	gui.drawFill(v, barX, y, barWidth, 4*FU, 156)
+	gui.drawFill(v, barX, y, filledBarWidth, 4*FU, 151)
+
+	gui.drawString(v, x, y, "Thirst")
+	gui.drawString(v, barX + 10*FU, y, thirst .. "%")
+	y = y + 5*FU
 end
 
 function Stats:__init(props)
