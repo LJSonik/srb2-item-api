@@ -83,7 +83,9 @@ function mod.stopActionAnimation(action)
 	for i, animParams in ipairs(action.def.animations) do
 		local animDef = mod.actionAnimationDefs[animParams.type]
 		if animDef.stop then
-			animDef.stop(mobj, action.animations[i], animParams)
+			if mobj and mobj.valid then
+				animDef.stop(mobj, action.animations[i], animParams)
+			end
 		end
 	end
 end
