@@ -20,17 +20,22 @@ function mod.loadControlOptions()
 
 		if not (inputType == "short" or inputType == "long") then continue end
 
+		local parsedKey
 		if key:sub(1, 1) == "@" then
 			keyIsGameControl = true
-			key = _G["GC_" .. key:sub(2):upper()]
-			if key == nil then continue end
-		elseif input.keyNameToNum(key) == nil then
+			parsedKey = _G["GC_" .. key:sub(2):upper()]
+		elseif input.keyNameToNum(key) ~= nil then
+			parsedKey = key
+		end
+
+		if key == nil then
+			print(("\x83NOTICE:\x80 unknown control '%s' while loading configuration"):format(key))
 			continue
 		end
 
 		cmdDef.keyIsGameControl = keyIsGameControl
 		cmdDef.inputType = inputType
-		cmdDef.key = key
+		cmdDef.key = parsedKey
 	end
 
 	file:close()
