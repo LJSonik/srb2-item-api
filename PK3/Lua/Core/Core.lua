@@ -207,7 +207,7 @@ addHook("PlayerSpawn", function(p)
 	for i = 1, #mod.carrySlotDefs do
 		local slot = p.itemapi_carrySlots[i]
 		if slot and not (slot.mobj and slot.mobj.valid) then
-			mod.spawnCarriedItemMobj(p)
+			mod.spawnCarriedItemMobj(p, i)
 		end
 	end
 end)

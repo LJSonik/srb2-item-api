@@ -88,7 +88,7 @@ function mod.carryItem(player, itemType, itemData, slotID)
 	player.itemapi_carrySlots[slotDef.index] = slot
 	player.itemapi_carrySlots[slotDef.id] = slot
 
-	mod.spawnCarriedItemMobj(player)
+	mod.spawnCarriedItemMobj(player, slotID)
 
 	return true
 end
@@ -195,7 +195,7 @@ function mod.smartUncarryItem(player, slotID)
 	mod.uncarryItem(player, slotID)
 
 	if multiple and player.itemapi_inventory:remove(itemType) then
-		mod.carryItem(player, itemType)
+		mod.carryItem(player, itemType, nil, slotID)
 		player.itemapi_carrySlots[slotID].multiple = true
 	end
 end
