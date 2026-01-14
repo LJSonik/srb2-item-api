@@ -393,6 +393,8 @@ function mod.canPlayerContinueAction(player)
 	if actionDef.type == "carried_item" then
 		---@cast actionDef itemapi.ItemActionDef
 
+		if not player.itemapi_carrySlots["right_hand"] then return false end
+
 		if actionDef.requiredGroundItem then
 			local groundItem = action.groundItem
 			if not (groundItem and groundItem.valid) then return false end
