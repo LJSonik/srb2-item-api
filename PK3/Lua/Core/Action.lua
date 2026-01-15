@@ -12,9 +12,9 @@ local ljclass = ljrequire "ljclass"
 ---
 ---@field action fun(player: player_t)
 ---
----@field start fun(player: player_t)
----@field tick fun(player: player_t, actors: player_t[])
----@field stop fun(player: player_t)
+---@field start fun(action: itemapi.Action, actor: player_t)
+---@field tick fun(action: itemapi.Action, actor: player_t)
+---@field stop fun(action: itemapi.Action, actor: player_t)
 ---
 ---@field onActorStart fun(player: player_t)
 ---@field onActorStop fun(player: player_t)
@@ -210,7 +210,7 @@ function mod.updateActions()
 
 		if actionDef.tick then
 			if actionDef.type == "carried_item" then
-				actionDef.tick(action.target, action.actors)
+				actionDef.tick(action, action.target)
 			elseif actionDef.type == "ground_item" then
 				actionDef.tick(action, action.target, action.actors)
 			elseif actionDef.type == "fof" then
@@ -238,7 +238,7 @@ function mod.despawnAction(action)
 	local actionDef = action.def
 	if actionDef.stop then
 		if actionDef.type == "carried_item" then
-			actionDef.stop(action.target)
+			actionDef.stop(action, action.target)
 		elseif actionDef.type == "ground_item" then
 			actionDef.stop(action, action.target)
 		elseif actionDef.type == "fof" then
@@ -480,7 +480,7 @@ function mod.performCarriedItemAction(player, index, groundItem)
 		action.groundItem = groundItem
 
 		if actionDef.start then
-			actionDef.start(action.target)
+			actionDef.start(action, action.target)
 		end
 
 		table.insert(action.actors, player)
