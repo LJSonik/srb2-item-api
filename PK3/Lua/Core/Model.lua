@@ -23,6 +23,7 @@ local mod = itemapi
 ---@field rotation angle_t
 ---@field scale fixed_t
 
+
 ---@class itemapi.ModelAvatar
 ---@field [integer] mobj_t
 

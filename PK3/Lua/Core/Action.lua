@@ -9,6 +9,7 @@ local ljclass = ljrequire "ljclass"
 ---@field item string
 ---@field requiredGroundItem? string
 ---@field condition? fun(): boolean
+---
 ---@field action fun(player: player_t)
 ---
 ---@field start fun(player: player_t)
@@ -18,11 +19,13 @@ local ljclass = ljrequire "ljclass"
 ---@field onActorStart fun(player: player_t)
 ---@field onActorStop fun(player: player_t)
 
+
 ---@class itemapi.GroundItemActionDef : itemapi.ActionDef
 ---@field item string
 ---@field requiredCarriedItem? string
 ---@field condition? fun(player: player_t, mobj: mobj_t): boolean
 ---@field selectSpot? boolean
+---
 ---@field action fun(player: player_t, mobj: mobj_t, groundItemDef: itemapi.ItemDef, carriedItemDef: itemapi.ItemDef?, spotIndex: integer?)
 ---@field actionV2 fun(action: itemapi.Action, mobj: mobj_t, actors: player_t[])
 ---
@@ -32,6 +35,7 @@ local ljclass = ljrequire "ljclass"
 ---
 ---@field onActorStart fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
 ---@field onActorStop fun(action: itemapi.Action, mobj: mobj_t, actor: player_t)
+
 
 ---@class itemapi.FOFActionDef : itemapi.ActionDef
 ---@field item string
@@ -46,13 +50,16 @@ local ljclass = ljrequire "ljclass"
 ---@field onActorStart fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF, actor: player_t)
 ---@field onActorStop fun(action: itemapi.Action, aimedFOF: itemapi.AimedFOF, actor: player_t)
 
+
 ---@alias itemapi.ActionType "carried_item"|"ground_item"|"fof"
+
 
 ---@class itemapi.AimedFOF
 ---@field fof ffloor_t
 ---@field x fixed_t
 ---@field y fixed_t
 ---@field z fixed_t
+
 
 ---@class player_t
 ---@field itemapi_action? itemapi.Action

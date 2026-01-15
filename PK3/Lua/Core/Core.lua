@@ -21,11 +21,13 @@ mod.entityToID = {}
 ---@type any[]
 mod.idToEntity = {}
 
+
 ---@class itemapi.Vars
 ---@field time tic_t
 ---@field mapInitialised boolean
 mod.vars.time = 0
 mod.vars.mapInitialised = false
+
 
 ---@class itemapi.Client
 ---@field time tic_t

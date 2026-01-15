@@ -11,6 +11,7 @@ rawset(_G, "itemapi", mod)
 ---@class itemapi.Vars
 mod.vars = {}
 
+
 ---@class itemapi.Client
 mod.client = {}
 

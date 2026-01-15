@@ -21,12 +21,14 @@ local gui = ljrequire "ljgui"
 ---@field defaultInputType "short"|"long"
 ---@field showOnRight boolean
 
+
 ---@alias itemapi.UIModeType
 ---| "game"
 ---| "menu"
 ---| "action_selection"
 ---| "large_item_placement"
 ---| "spot_selection"
+
 
 ---@class itemapi.UIModeDef
 ---@field id    string
@@ -41,6 +43,7 @@ local gui = ljrequire "ljgui"
 ---@field leave  fun()
 ---@field update fun()
 ---@field draw   fun(v: videolib)
+
 
 ---@class itemapi.Client
 ---@field uiMode table

@@ -11,11 +11,13 @@ local mod = itemapi
 ---@field y fixed_t
 ---@field z fixed_t
 
+
 ---@class itemapi.CarrySlot
 ---@field itemType integer
 ---@field itemData any
 ---@field mobj mobj_t
 ---@field multiple? boolean
+
 
 ---@class player_t
 ---@field itemapi_carrySlots { [string|integer]: itemapi.CarrySlot }

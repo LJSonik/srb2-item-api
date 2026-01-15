@@ -26,6 +26,7 @@ local mod = itemapi
 ---
 ---@field [integer] any
 
+
 ---@class itemapi.ModelDef
 ---@field id string
 ---@field index integer

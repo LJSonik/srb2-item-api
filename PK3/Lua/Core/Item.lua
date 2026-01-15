@@ -4,6 +4,7 @@ local mod = itemapi
 
 ---@alias itemapi.ItemType string|integer
 
+
 ---@class itemapi.ItemDef
 ---@field id           string
 ---@field index        integer
