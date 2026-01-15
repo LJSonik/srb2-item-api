@@ -296,7 +296,7 @@ function mod.findAvailableActions(player, mobj)
 		for i, actionType in ipairs(carriedItemDef.actions) do
 			local actionDef = mod.actionDefs[actionType]
 
-			if actionDef.requiredGroundItem and not mod.doesItemMatchSelector(groundItemDefID, actionDef.requiredGroundItem) then
+			if actionDef.requiredGroundItem and not mod.doesItemMatchSelector(groundItemID, actionDef.requiredGroundItem) then
 				continue
 			end
 
