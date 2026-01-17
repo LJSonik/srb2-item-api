@@ -67,6 +67,7 @@ for _, filename in ipairs{
 	"Core/InworldImage.lua",
 	"Core/InworldText.lua",
 	"Core/Hunger.lua",
+	"Core/Thirst.lua",
 	"Core/SpriteText.lua",
 	"Core/InfoBubbles.lua",
 	"Core/Options.lua",
