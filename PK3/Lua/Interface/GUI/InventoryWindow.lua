@@ -30,14 +30,27 @@ local windowStyle = {
 local netCommand_carryInventoryItem = nc.add(function(p, stream)
 	local slotIndex = bs.readByte(stream)
 
-	if not p.itemapi_inventory or mod.getMainCarriedItemType(p) then return end
+	if not p.itemapi_inventory then return end
 
 	local itemType, _, itemData = p.itemapi_inventory:get(slotIndex)
+	if not itemType then return end
+
+	local itemDef = mod.itemDefs[itemType]
+
+	local slotID
+	if itemDef.dualWieldable then
+		slotID = mod.findFirstEmptyDualWieldableCarrySlot(p)
+	elseif not p.itemapi_carrySlots["right_hand"] then
+		slotID = "right_hand"
+	end
+
+	if not slotID then return end
+
 	p.itemapi_inventory:removeFromSlot(slotIndex)
 
 	if itemType then
-		mod.carryItem(p, itemType, itemData)
-		p.itemapi_carrySlots["right_hand"].multiple = true
+		mod.carryItem(p, itemType, itemData, slotID)
+		p.itemapi_carrySlots[slotID].multiple = true
 	end
 end)
 

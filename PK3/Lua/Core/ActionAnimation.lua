@@ -32,7 +32,7 @@ end
 function mod.startActionAnimation(action)
 	local mobj
 	if action.def.type == "carried_item" then
-		mobj = action.target.itemapi_carrySlots["right_hand"].mobj
+		mobj = action.target.itemapi_carrySlots[action.slotIndex].mobj
 	else
 		mobj = action.target
 	end
@@ -54,7 +54,7 @@ end
 function mod.updateActionAnimation(action)
 	local mobj
 	if action.def.type == "carried_item" then
-		mobj = action.target.itemapi_carrySlots["right_hand"].mobj
+		mobj = action.target.itemapi_carrySlots[action.slotIndex].mobj
 	else
 		mobj = action.target
 	end
@@ -73,7 +73,7 @@ function mod.stopActionAnimation(action)
 
 	local mobj
 	if action.def.type == "carried_item" then
-		local slot = action.target.itemapi_carrySlots["right_hand"]
+		local slot = action.target.itemapi_carrySlots[action.slotIndex]
 		mobj = slot and slot.mobj or nil
 	else
 		mobj = action.target

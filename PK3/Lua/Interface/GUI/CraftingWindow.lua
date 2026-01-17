@@ -115,7 +115,7 @@ local function startCrafting(recipeIndex)
 		mod.sendNetCommand(consoleplayer, stream)
 	else
 		if not def:isCraftableWithInventory(consoleplayer.itemapi_inventory)
-		or mod.getMainCarriedItemType(consoleplayer)
+		or consoleplayer.itemapi_carrySlots["right_hand"]
 		then
 			return
 		end

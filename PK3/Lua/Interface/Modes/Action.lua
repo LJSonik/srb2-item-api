@@ -38,8 +38,9 @@ local netCommand_startMobjActionSelection = nc.add(function(p)
 end)
 
 local netCommand_performCarriedItemAction = nc.add(function(p, stream)
-	local index = bs.readByte(stream)
-	mod.performCarriedItemAction(p, index)
+	local actionIndex = bs.readByte(stream)
+	local slotIndex = bs.readByte(stream)
+	mod.performCarriedItemAction(p, slotIndex, actionIndex)
 end)
 
 local netCommand_performGroundItemAction = nc.add(function(p, stream)
@@ -69,23 +70,27 @@ local netCommand_performFOFAction = nc.add(function(p, stream)
 end)
 
 local netCommand_storeCarriedItem = nc.add(function(p)
-	local slot = p.itemapi_carrySlots["right_hand"]
-	if not slot then return end
+	local slotID = mod.findLastStorableDualWieldableCarrySlot(p)
+	if not slotID then return end
+
+	local slot = consoleplayer.itemapi_carrySlots[slotID]
 
 	local itemDef = mod.itemDefs[slot.itemType]
 	if not itemDef.storable then return end
 
 	if p.itemapi_inventory:add(slot.itemType, 1, slot.itemData) then
-		mod.uncarryItem(p)
+		mod.uncarryItem(p, slotID)
 	end
 end)
 
 local netCommand_placeCarriedItem = nc.add(function(p)
-	local slot = p.itemapi_carrySlots["right_hand"]
-	if not slot then return end
+	local slotID = mod.findLastPlaceableDualWieldableCarrySlot(p)
+	if not slotID then return end
+
+	local slot = p.itemapi_carrySlots[slotID]
 
 	if mod.placeItem(p, slot.itemType, slot.itemData) then
-		mod.smartUncarryItem(p)
+		mod.smartUncarryItem(p, slotID)
 	end
 end)
 
@@ -102,9 +107,16 @@ local netCommand_carryMobj = nc.add(function(p)
 		return
 	end
 
-	if def.index and mod.carryItem(p, def.index) then
-		local slot = p.itemapi_carrySlots["right_hand"]
-		slot.itemData = mo.itemapi_data
+	local slotID
+	if def.dualWieldable then
+		slotID = mod.findFirstEmptyDualWieldableCarrySlot(p)
+	else
+		slotID = "right_hand"
+	end
+
+	if not slotID then return end
+
+	if def.index and mod.carryItem(p, def.index, mo.itemapi_data, slotID) then
 		P_RemoveMobj(mo)
 	end
 end)
@@ -141,8 +153,10 @@ function mod.openActionSelection()
 		cl.aimedMobj = nil
 	end
 
+	local carryingAnything = (mod.countEmptyDualWieldableCarrySlots(consoleplayer) < #mod.dualWieldableCarrySlots)
 	local availableActions = mod.findAvailableActions(consoleplayer, mod.client.aimedMobj)
-	if #availableActions == 0 and not (mod.getMainCarriedItemType(consoleplayer) or mod.client.aimedMobj) then
+
+	if #availableActions == 0 and not (carryingAnything or mod.client.aimedMobj) then
 		return
 	end
 
@@ -197,6 +211,9 @@ function mod.sendActionNetCommand(availableActionIndex, spotIndex)
 
 	local stream = nc.prepare(netCommandID)
 	bs.writeByte(stream, availableAction.index)
+	if availableAction.type == "carried_item" then
+		bs.writeByte(stream, availableAction.slotIndex)
+	end
 	if spotIndex ~= nil then
 		bs.writeByte(stream, spotIndex)
 	end
@@ -258,6 +275,30 @@ local function performAction(availableActionIndex)
 		end
 	else
 		mod.sendActionNetCommand(availableActionIndex)
+	end
+end
+
+---@return "carry"|"store"|nil
+local function shouldCarryOrStore()
+	local carriableDef = nil
+	local mo = mod.client.actionSelection.mobj
+	if mo and mo.valid then
+		carriableDef = mod.getItemDefFromMobj(mo)
+		if not (carriableDef and carriableDef.carriable ~= false and not (carriableDef.getCarriable and not carriableDef.getCarriable(mo))) then
+			carriableDef = nil
+		end
+	end
+
+	-- There is a dual-wieldable item to carry and the player has a free hand
+	if carriableDef and carriableDef.dualWieldable
+	and mod.findFirstEmptyDualWieldableCarrySlot(consoleplayer) then
+		return "carry"
+	elseif mod.findFirstStorableDualWieldableCarrySlot(consoleplayer) then
+		return "store"
+	elseif carriableDef then
+		return "carry"
+	else
+		return nil
 	end
 end
 
@@ -341,39 +382,29 @@ mod.addUIMode("action_selection", {
 			showOnRight = true,
 
 			getName = function()
-				return mod.getMainCarriedItemType(consoleplayer) and "store" or "carry"
+				local what = shouldCarryOrStore()
+
+				if what == "carry" then
+					return "carry"
+				elseif what == "store" then
+					return "store"
+				else
+					return "store/carry"
+				end
 			end,
 
 			condition = function()
-				local itemType = mod.getMainCarriedItemType(consoleplayer)
-
-				if itemType then
-					local def = mod.itemDefs[itemType]
-					return (def and def.storable ~= false)
-				else
-					local sel = mod.client.actionSelection
-					if not (sel.mobj and sel.mobj.valid) then return false end
-					local def = mod.getItemDefFromMobj(sel.mobj)
-					return (def and def.carriable ~= false and not (def.getCarriable and not def.getCarriable(sel.mobj)))
-				end
+				return shouldCarryOrStore()
 			end,
 
 			action = function()
 				if not checkSelectionValidity() then return end
 
-				local itemType = mod.getMainCarriedItemType(consoleplayer)
-
-				if itemType then
-					local def = mod.itemDefs[itemType]
-					if def.storable then
-						mod.sendNetCommand_storeCarriedItem()
-					end
-				elseif mod.client.actionSelection.mobj then
-					local mo = mod.client.actionSelection.mobj
-					local def = mod.getItemDefFromMobj(mo)
-					if def and def.carriable and not (def.getCarriable and not def.getCarriable(mo)) then
-						mod.sendNetCommand_carryMobj()
-					end
+				local what = shouldCarryOrStore()
+				if what == "carry" then
+					mod.sendNetCommand_carryMobj()
+				elseif what == "store" then
+					mod.sendNetCommand_storeCarriedItem()
 				end
 			end
 		},
@@ -384,21 +415,13 @@ mod.addUIMode("action_selection", {
 			showOnRight = true,
 
 			condition = function()
-				local itemType = mod.getMainCarriedItemType(consoleplayer)
-				if itemType then
-					local def = mod.itemDefs[itemType]
-					return (def and def.placeable ~= false)
-				else
-					return false
-				end
+				return (mod.findFirstPlaceableDualWieldableCarrySlot(consoleplayer) ~= nil)
 			end,
 
 			action = function()
 				if not checkSelectionValidity() then return end
 
-				if mod.getMainCarriedItemType(consoleplayer) then
-					mod.sendNetCommand_placeCarriedItem()
-				end
+				mod.sendNetCommand_placeCarriedItem()
 			end
 		},
 		{

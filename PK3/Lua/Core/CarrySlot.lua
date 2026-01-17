@@ -7,9 +7,7 @@ local mod = itemapi
 ---@field index integer
 ---@field name  string
 ---
----@field x fixed_t
----@field y fixed_t
----@field z fixed_t
+---@field getPosition fun(player: player_t): fixed_t, fixed_t, fixed_t
 
 
 ---@class itemapi.CarrySlot
@@ -21,6 +19,9 @@ local mod = itemapi
 
 ---@class player_t
 ---@field itemapi_carrySlots { [string|integer]: itemapi.CarrySlot }
+
+
+itemapi.dualWieldableCarrySlots = { "right_hand", "left_hand" }
 
 
 ---@type { [string|integer]: itemapi.CarrySlotDef }
@@ -42,4 +43,30 @@ function mod.addCarrySlot(id, def)
 end
 
 
-mod.addCarrySlot("right_hand", {})
+mod.addCarrySlot("right_hand", {
+	getPosition = function(player)
+		local mo = player.mo
+		local dist = mo.radius * 2
+		local angle = player.drawangle - ANGLE_45
+
+		local x = mo.x + FixedMul(dist, cos(angle))
+		local y = mo.y + FixedMul(dist, sin(angle))
+		local z = mo.z + mo.height / 2
+
+		return x, y, z
+	end
+})
+
+mod.addCarrySlot("left_hand", {
+	getPosition = function(player)
+		local mo = player.mo
+		local dist = mo.radius * 2
+		local angle = player.drawangle + ANGLE_45
+
+		local x = mo.x + FixedMul(dist, cos(angle))
+		local y = mo.y + FixedMul(dist, sin(angle))
+		local z = mo.z + mo.height / 2
+
+		return x, y, z
+	end
+})

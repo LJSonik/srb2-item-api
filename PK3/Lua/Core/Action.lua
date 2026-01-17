@@ -11,6 +11,7 @@ local ljclass = ljrequire "ljclass"
 ---@field condition? fun(): boolean
 ---
 ---@field action fun(player: player_t)
+---@field actionV2 fun(action: itemapi.Action, actor: player_t)
 ---
 ---@field start fun(action: itemapi.Action, actor: player_t)
 ---@field tick fun(action: itemapi.Action, actor: player_t)
@@ -107,6 +108,8 @@ mod.ActionDef = ActionDef
 ---@field itemType? integer
 ---@field materialID? string
 ---@field index integer
+---@field slotIndex? integer
+---@field carriedItemSlotIndex? integer
 ---@field spotIndex? integer
 ---@field progress tic_t
 ---@field completed? boolean
@@ -119,6 +122,23 @@ ljclass.getter(Action, "def", function(self)
 	return mod.actionDefs[self.type]
 end)
 
+
+---@param p player_t
+---@param requiredItem
+---@return integer?
+local function findRequiredCarriedItemSlotIndex(p, requiredItem)
+	if not requiredItem then return nil end
+
+	for _, id in ipairs(itemapi.dualWieldableCarrySlots) do
+		local slot = p.itemapi_carrySlots[id]
+
+		if slot and mod.doesItemMatchSelector(slot.itemType, requiredItem) then
+			return mod.carrySlotDefs[id].index
+		end
+	end
+
+	return nil
+end
 
 ---Registers a new action
 ---@param def itemapi.ActionDef
@@ -259,14 +279,21 @@ function mod.completeAction(action)
 
 	if not actionDef.stop then
 		if actionDef.type == "carried_item" then
-			actionDef.action(actor, action.groundItem)
+			if actionDef.actionV2 then
+				actionDef.actionV2(action, action.target)
+			elseif actionDef.action then
+				actionDef.action(actor, action.groundItem)
+			end
 		elseif actionDef.type == "ground_item" then
 			local groundItemDef = mod.getItemDefFromMobj(action.target)
-			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(actor)]
 
 			if actionDef.actionV2 then
 				actionDef.actionV2(action, action.target, action.actors)
-			else
+			elseif actionDef.action then
+				local carriedItemSlotIndex = findRequiredCarriedItemSlotIndex(actor, actionDef.requiredCarriedItem)
+				local slot = carriedItemSlotIndex and actor.itemapi_carrySlots[carriedItemSlotIndex]
+				local carriedItemDef = slot and mod.itemDefs[slot.itemType]
+
 				actionDef.action(actor, action.target, groundItemDef, carriedItemDef, action.spotIndex)
 			end
 		elseif actionDef.type == "fof" then
@@ -289,11 +316,15 @@ end
 function mod.findAvailableActions(player, mobj)
 	local availableActions = {}
 
-	local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 	local groundItemID = mobj and mod.getItemIDFromMobj(mobj)
 
-	if carriedItemDef then
-		for i, actionType in ipairs(carriedItemDef.actions) do
+	for _, slotID in ipairs(itemapi.dualWieldableCarrySlots) do
+		local slot = player.itemapi_carrySlots[slotID]
+		if not slot then continue end
+
+		local itemDef = mod.itemDefs[slot.itemType]
+
+		for i, actionType in ipairs(itemDef.actions) do
 			local actionDef = mod.actionDefs[actionType]
 
 			if actionDef.requiredGroundItem and not mod.doesItemMatchSelector(groundItemID, actionDef.requiredGroundItem) then
@@ -302,6 +333,7 @@ function mod.findAvailableActions(player, mobj)
 
 			table.insert(availableActions, {
 				type = "carried_item",
+				slotIndex = mod.carrySlotDefs[slotID].index,
 				index = i,
 				def = actionDef
 			})
@@ -315,11 +347,11 @@ function mod.findAvailableActions(player, mobj)
 			for i, actionType in ipairs(groundItemDef.groundActions) do
 				local actionDef = mod.actionDefs[actionType]
 
-				local carriedItemID = carriedItemDef and carriedItemDef.id
-				if actionDef.requiredCarriedItem and not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem)
-				or actionDef.condition and not actionDef.condition(player, mobj) then
+				if actionDef.requiredCarriedItem and not findRequiredCarriedItemSlotIndex(player, actionDef.requiredCarriedItem) then
 					continue
 				end
+
+				if actionDef.condition and not actionDef.condition(player, mobj) then continue end
 
 				table.insert(availableActions, {
 					type = "ground_item",
@@ -355,11 +387,15 @@ end
 ---@param mobj mobj_t
 ---@return boolean
 function mod.canPlayerPerformActionsOnMobj(player, mobj)
-	local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
 	local groundItemID = mobj and mod.getItemIDFromMobj(mobj)
 
-	if carriedItemDef then
-		for _, actionType in ipairs(carriedItemDef.actions) do
+	for _, slotID in ipairs(itemapi.dualWieldableCarrySlots) do
+		local slot = player.itemapi_carrySlots[slotID]
+		if not slot then continue end
+
+		local itemDef = mod.itemDefs[slot.itemType]
+
+		for _, actionType in ipairs(itemDef.actions) do
 			local actionDef = mod.actionDefs[actionType]
 
 			if not actionDef.requiredGroundItem or mod.doesItemMatchSelector(groundItemID, actionDef.requiredGroundItem) then
@@ -371,15 +407,13 @@ function mod.canPlayerPerformActionsOnMobj(player, mobj)
 	if groundItemID then
 		local groundItemDef = mod.itemDefs[groundItemID]
 
-		if not carriedItemDef then
-			return true
-		end
+		if mod.findFirstEmptyDualWieldableCarrySlot(player) then return true end
 
 		for _, actionType in ipairs(groundItemDef.groundActions) do
 			local actionDef = mod.actionDefs[actionType]
 
-			local carriedItemID = carriedItemDef and carriedItemDef.id
-			if not actionDef.requiredCarriedItem or mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem) then
+			if not actionDef.requiredCarriedItem
+			or findRequiredCarriedItemSlotIndex(player, actionDef.requiredCarriedItem) then
 				return true
 			end
 		end
@@ -400,7 +434,7 @@ function mod.canPlayerContinueAction(player)
 	if actionDef.type == "carried_item" then
 		---@cast actionDef itemapi.ItemActionDef
 
-		if not player.itemapi_carrySlots["right_hand"] then return false end
+		if not player.itemapi_carrySlots[action.slotIndex] then return false end
 
 		if actionDef.requiredGroundItem then
 			local groundItem = action.groundItem
@@ -424,7 +458,8 @@ function mod.canPlayerContinueAction(player)
 		if dist > MAX_ACTION_DIST then return false end
 
 		if actionDef.requiredCarriedItem then
-			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
+			local slot = player.itemapi_carrySlots[action.carriedItemSlotIndex]
+			local carriedItemDef = slot and mod.itemDefs[slot.itemType]
 			local carriedItemID = carriedItemDef and carriedItemDef.id
 
 			if not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem) then
@@ -441,7 +476,8 @@ function mod.canPlayerContinueAction(player)
 		if dist > MAX_ACTION_DIST then return false end
 
 		if actionDef.requiredCarriedItem then
-			local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
+			local slot = player.itemapi_carrySlots[action.carriedItemSlotIndex]
+			local carriedItemDef = slot and mod.itemDefs[slot.itemType]
 			local carriedItemID = carriedItemDef and carriedItemDef.id
 
 			if not mod.doesItemMatchSelector(carriedItemID, actionDef.requiredCarriedItem) then
@@ -454,13 +490,15 @@ function mod.canPlayerContinueAction(player)
 end
 
 ---@param player player_t
----@param index integer
+---@param slotIndex integer
+---@param actionIndex integer
 ---@param groundItem? mobj_t
-function mod.performCarriedItemAction(player, index, groundItem)
-	local itemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
-	if not itemDef then return end
+function mod.performCarriedItemAction(player, slotIndex, actionIndex, groundItem)
+	local slot = player.itemapi_carrySlots[slotIndex]
+	if not slot then return end
 
-	local actionType = itemDef.actions[index]
+	local itemDef = mod.itemDefs[slot.itemType]
+	local actionType = itemDef.actions[actionIndex]
 	if not actionType then return end
 	local actionDef = mod.actionDefs[actionType]
 
@@ -472,27 +510,24 @@ function mod.performCarriedItemAction(player, index, groundItem)
 		mod.stopAction(player)
 	end
 
-	if actionDef.duration ~= nil then
-		local action = mod.spawnAction(actionType)
-		action.target = player
-		action.itemType = mod.getMainCarriedItemType(player)
-		action.index = index
-		action.groundItem = groundItem
+	local action = mod.spawnAction(actionType)
+	action.target = player
+	action.itemType = slot.itemType
+	action.index = actionIndex
+	action.slotIndex = slotIndex
+	action.groundItem = groundItem
 
-		if actionDef.start then
-			actionDef.start(action, action.target)
-		end
+	if actionDef.start then
+		actionDef.start(action, action.target)
+	end
 
-		table.insert(action.actors, player)
-		player.itemapi_action = action
+	table.insert(action.actors, player)
+	player.itemapi_action = action
 
-		mod.startActionAnimation(action)
+	mod.startActionAnimation(action)
 
-		if actionDef.onActorStart then
-			actionDef.onActorStart(action.target)
-		end
-	else
-		actionDef.action(player, groundItem)
+	if actionDef.onActorStart then
+		actionDef.onActorStart(action.target)
 	end
 end
 
@@ -510,11 +545,8 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 	if not actionType then return end
 	local actionDef = mod.actionDefs[actionType]
 
-	local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
-	local carriedItemID = carriedItemDef and carriedItemDef.id
-
-	local requiredID = actionDef.requiredCarriedItem
-	if requiredID and not mod.doesItemMatchSelector(carriedItemID, requiredID) then return end
+	local carriedItemSlotIndex = actionDef.requiredCarriedItem and findRequiredCarriedItemSlotIndex(player, actionDef.requiredCarriedItem)
+	if actionDef.requiredCarriedItem and not carriedItemSlotIndex then return end
 
 	if actionDef.condition and not actionDef.condition(player, groundItem) then return end
 
@@ -536,6 +568,7 @@ function mod.performGroundItemAction(player, actionIndex, groundItem, spotIndex)
 		action.itemType = groundItemDef.index
 		action.index = actionIndex
 		action.spotIndex = spotIndex
+		action.carriedItemSlotIndex = carriedItemSlotIndex
 
 		if actionDef.start then
 			actionDef.start(action, action.target)
@@ -565,11 +598,8 @@ function mod.performFOFAction(player, actionIndex, aimedFOF)
 	if not actionType then return end
 	local actionDef = mod.actionDefs[actionType] ---@type itemapi.FOFActionDef
 
-	local carriedItemDef = mod.itemDefs[mod.getMainCarriedItemType(player)]
-	local carriedItemID = carriedItemDef and carriedItemDef.id
-
-	local requiredID = actionDef.requiredCarriedItem
-	if requiredID and not mod.doesItemMatchSelector(carriedItemID, requiredID) then return end
+	local carriedItemSlotIndex = actionDef.requiredCarriedItem and findRequiredCarriedItemSlotIndex(player, actionDef.requiredCarriedItem)
+	if actionDef.requiredCarriedItem and not carriedItemSlotIndex then return end
 
 	if actionDef.condition and not actionDef.condition(player, aimedFOF) then return end
 
@@ -581,6 +611,7 @@ function mod.performFOFAction(player, actionIndex, aimedFOF)
 	action.target = aimedFOF
 	action.materialID = materialID
 	action.index = actionIndex
+	action.carriedItemSlotIndex = carriedItemSlotIndex
 
 	if actionDef.start then
 		actionDef.start(action, aimedFOF)

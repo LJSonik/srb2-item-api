@@ -18,23 +18,10 @@ states[S_ITEMAPI_CARRIEDITEM] = { SPR_UNKN, 0 }
 
 -- ...I assume Sonic & co are right handed lol?
 ---@param player player_t
-function mod.getCarriedItemPosition(player)
-	local mo = player.mo
-	local dist = mo.radius * 2
-	local angle = player.drawangle - ANGLE_45
-
-	local x = mo.x + FixedMul(dist, cos(angle))
-	local y = mo.y + FixedMul(dist, sin(angle))
-	local z = mo.z + mo.height / 2
-
-	return x, y, z
-end
-
----@param player player_t
----@return integer?
-function mod.getMainCarriedItemType(player)
-	local slot = player.itemapi_carrySlots["right_hand"]
-	return slot and slot.itemType
+---@param slotID string|integer
+function mod.getCarriedItemPosition(player, slotID)
+	local slotDef = mod.carrySlotDefs[slotID]
+	return slotDef.getPosition(player)
 end
 
 ---@param player player_t
@@ -45,7 +32,7 @@ function mod.spawnCarriedItemMobj(player, slotID)
 	local slot = player.itemapi_carrySlots[slotID]
 	local itemDef = mod.itemDefs[slot.itemType]
 
-	local x, y, z = mod.getCarriedItemPosition(player)
+	local x, y, z = mod.getCarriedItemPosition(player, slotID)
 	local mo = P_SpawnMobj(x, y, z, MT_ITEMAPI_CARRIEDITEM)
 	slot.mobj = mo
 
@@ -148,7 +135,7 @@ function mod.updateCarriedItems(player)
 		local mo = slot.mobj
 		if not mo then continue end
 
-		local x, y, z = mod.getCarriedItemPosition(player)
+		local x, y, z = mod.getCarriedItemPosition(player, i)
 		P_MoveOrigin(mo, x, y, z)
 
 		mo.angle = player.mo.angle
@@ -198,4 +185,101 @@ function mod.smartUncarryItem(player, slotID)
 		mod.carryItem(player, itemType, nil, slotID)
 		player.itemapi_carrySlots[slotID].multiple = true
 	end
+end
+
+---@param player player_t
+---@return integer
+function mod.countEmptyDualWieldableCarrySlots(player)
+	local n = 0
+
+	local slots = player.itemapi_carrySlots
+	for _, id in ipairs(mod.dualWieldableCarrySlots) do
+		if not slots[id] then
+			n = n + 1
+		end
+	end
+
+	return n
+end
+
+
+---@param player player_t
+---@return integer?
+function mod.findFirstEmptyDualWieldableCarrySlot(player)
+	local slots = player.itemapi_carrySlots
+	for _, id in ipairs(itemapi.dualWieldableCarrySlots) do
+		if not slots[id] then return id end
+	end
+
+	return nil
+end
+
+---@param player player_t
+---@return integer?
+function mod.findFirstStorableDualWieldableCarrySlot(player)
+	for _, id in ipairs(mod.dualWieldableCarrySlots) do
+		local slot = player.itemapi_carrySlots[id]
+
+		if slot then
+			local itemDef = mod.itemDefs[slot.itemType]
+			if itemDef and itemDef.storable ~= false then
+				return mod.carrySlotDefs[id].index
+			end
+		end
+	end
+
+	return nil
+end
+
+---@param player player_t
+---@return integer?
+function mod.findFirstPlaceableDualWieldableCarrySlot(player)
+	for _, id in ipairs(mod.dualWieldableCarrySlots) do
+		local slot = player.itemapi_carrySlots[id]
+
+		if slot then
+			local itemDef = mod.itemDefs[slot.itemType]
+			if itemDef and itemDef.placeable ~= false then
+				return mod.carrySlotDefs[id].index
+			end
+		end
+	end
+
+	return nil
+end
+
+---@param player player_t
+---@return integer?
+function mod.findLastStorableDualWieldableCarrySlot(player)
+	for i = #mod.dualWieldableCarrySlots, 1, -1 do
+		local id = mod.dualWieldableCarrySlots[i]
+		local slot = player.itemapi_carrySlots[id]
+
+		if slot then
+			local itemDef = mod.itemDefs[slot.itemType]
+			if itemDef and itemDef.storable ~= false then
+				return mod.carrySlotDefs[id].index
+			end
+		end
+	end
+
+	return nil
+end
+
+---@param player player_t
+---@return integer?
+function mod.findLastPlaceableDualWieldableCarrySlot(player)
+	for i = #mod.dualWieldableCarrySlots, 1, -1 do
+		local id = mod.dualWieldableCarrySlots[i]
+		local slot = player.itemapi_carrySlots[id]
+
+		if slot then
+			local itemDef = mod.itemDefs[slot.itemType]
+			if itemDef and itemDef.placeable ~= false then
+				return mod.carrySlotDefs[id].index
+			end
+		end
+	end
+
+	return nil
 end

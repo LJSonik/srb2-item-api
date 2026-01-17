@@ -241,13 +241,15 @@ function mod.placeItem(player, itemType, itemData, canPlaceOnSurface)
 end
 
 ---@param player player_t
+---@param slotID? string|integer
 ---@return mobj_t?
-function mod.placeCarriedItem(player)
-	local itemType = mod.getMainCarriedItemType(player)
-	if not itemType then return nil end
+function mod.placeCarriedItem(player, slotID)
+	slotID = $ or "right_hand"
 
-	local slot = player.itemapi_carrySlots["right_hand"]
-	local mo = mod.placeItem(player, itemType, slot.itemData)
+	local slot = player.itemapi_carrySlots[slotID]
+	if not slot then return nil end
+
+	local mo = mod.placeItem(player, slot.itemType, slot.itemData)
 
 	if mo then
 		mod.uncarryItem(player)

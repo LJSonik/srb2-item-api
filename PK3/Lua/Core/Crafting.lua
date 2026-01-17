@@ -116,7 +116,7 @@ function mod.canCraftRecipe(player, recipeType)
 
 	if not recipeDef
 	or not recipeDef:isCraftableWithInventory(player.itemapi_inventory)
-	or mod.getMainCarriedItemType(player)
+	or player.itemapi_carrySlots["right_hand"]
 	then
 		return false
 	end
