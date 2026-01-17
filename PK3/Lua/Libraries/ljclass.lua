@@ -6,8 +6,8 @@ local ljclass = {}
 ---@field __getters table<string, ljclass.Getter>
 ---@field __setters table<string, ljclass.Setter>
 
----@alias ljclass.Getter fun(object: table): any
----@alias ljclass.Setter fun(object: table, value: any)
+---@alias ljclass.Getter<C, V> fun(class: C): V
+---@alias ljclass.Setter<C, V> fun(class: C, value: V)
 
 
 ---@generic P
@@ -17,38 +17,8 @@ local ljclass = {}
 ---@return P
 local function createClass(parent, registered)
 	local class = {}
-
 	local getters = {}
 	local setters = {}
-
-	local objectMetatable = {
-		__index = function(object, k)
-			local v = class[k]
-			if v ~= nil then
-				return v
-			end
-
-			local getter = getters[k]
-			if getter then
-				return getter(object)
-			else
-				return nil
-			end
-		end,
-		__newindex = function(object, k, v)
-			local setter = setters[k]
-			if setter then
-				setter(object, v)
-			else
-				rawset(object, k, v)
-			end
-		end
-	}
-	-- local objectMetatable = { __index = class }
-
-	if registered then
-		registerMetatable(objectMetatable)
-	end
 
 	if parent then
 		for k, v in pairs(parent) do
@@ -66,22 +36,42 @@ local function createClass(parent, registered)
 	class.__getters = getters
 	class.__setters = setters
 
+	class.__index = function(object, k)
+		local v = class[k]
+		if v ~= nil then
+			return v
+		end
+
+		local getter = getters[k]
+		if getter then
+			return getter(object)
+		else
+			return nil
+		end
+	end
+
+	class.__newindex = function(object, k, v)
+		local setter = setters[k]
+		if setter then
+			setter(object, v)
+		else
+			rawset(object, k, v)
+		end
+	end
+
+	if registered then
+		registerMetatable(class)
+	end
+
 	setmetatable(class, {
 		__call = function(_, ...)
-			local object = setmetatable({}, objectMetatable)
+			local object = setmetatable({}, class)
 
 			if object.__init then
 				object:__init(...)
 			end
 
 			return object
-		end,
-		__newindex = function(class, k, v)
-			if k:sub(1, 2) == "__" and k ~= "__init" then
-				objectMetatable[k] = v
-			else
-				rawset(class, k, v)
-			end
 		end
 	})
 
@@ -104,18 +94,33 @@ function ljclass.localclass(parent)
 	return createClass(parent, false)
 end
 
----@param class ljclass.Class
+---@generic C : ljclass.Class
+---@generic V
+---@param class C
 ---@param name string
----@param callback ljclass.Getter
+---@param callback ljclass.Getter<C, V>
 function ljclass.getter(class, name, callback)
 	class.__getters[name] = callback
 end
 
----@param class ljclass.Class
+---@generic C : ljclass.Class
+---@generic V
+---@param class C
 ---@param name string
----@param callback ljclass.Setter
+---@param callback ljclass.Setter<C, V>
 function ljclass.setter(class, name, callback)
 	class.__setters[name] = callback
+end
+
+---@generic C : ljclass.Class
+---@generic V
+---@param class C
+---@param name string
+---@param getter ljclass.Getter<C, V>
+---@param setter ljclass.Setter<C, V>
+function ljclass.getterSetter(class, name, getter, setter)
+	ljclass.getter(class, name, getter)
+	ljclass.setter(class, name, setter)
 end
 
 ---@param class ljclass.Class
