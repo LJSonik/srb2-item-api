@@ -103,6 +103,8 @@ mod.ActionDef = ActionDef
 ---@field arrayIndex integer
 ---@field despawning? boolean
 ---@field def itemapi.ActionDef
+---@field carriedItemDef? itemapi.ItemDef
+---@field groundItemDef? itemapi.ItemDef
 ---@field actors player_t[]
 ---@field target? any
 ---@field itemType? integer
@@ -120,6 +122,18 @@ mod.Action = Action
 ---@param self itemapi.Action
 ljclass.getter(Action, "def", function(self)
 	return mod.actionDefs[self.type]
+end)
+
+---@param self itemapi.Action
+ljclass.getter(Action, "carriedItemDef", function(self)
+	local p = self.actors[1]
+	local slot = p.itemapi_carrySlots[self.carriedItemSlotIndex]
+	return mod.itemDefs[slot.itemType]
+end)
+
+---@param self itemapi.Action
+ljclass.getter(Action, "groundItemDef", function(self)
+	return mod.getItemDefFromMobj(self.target)
 end)
 
 
