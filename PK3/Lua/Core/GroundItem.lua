@@ -128,6 +128,10 @@ end
 ---@param id itemapi.ItemType
 function mod.spawnGroundItem(x, y, z, id)
 	local def = mod.itemDefs[id]
+	if not def then
+		error('unknown item ID "' .. tostring(id) .. '"', 2)
+	end
+
 	local mo = P_SpawnMobj(x, y, z, def.mobjType or MT_ITEMAPI_GROUNDITEM)
 
 	if def.mobjState then

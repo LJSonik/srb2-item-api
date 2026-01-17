@@ -52,6 +52,9 @@ end
 ---@param id itemapi.ItemType
 ---@return integer
 function Inventory:count(id)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -70,6 +73,9 @@ end
 ---@param id itemapi.ItemType
 ---@return integer quantity How many times this item can be added being the inventory becomes full.
 function Inventory:countFreeSpace(id)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -94,6 +100,9 @@ end
 ---@param quantity? integer Defaults to 1
 ---@return boolean canAdd True if the item(s) can be added. If not, the inventory does not have enough available space.
 function Inventory:canAdd(id, quantity)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
 	if quantity == nil then
 		quantity = 1
 	end
@@ -106,6 +115,10 @@ end
 ---@param data? any
 ---@return boolean added True if the item(s) was/were added. If not, the inventory does not have enough available space.
 function Inventory:add(id, quantity, data)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
+
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -142,6 +155,9 @@ end
 ---@param quantity? integer Defaults to 1
 ---@return boolean removed True if the item(s) was/were removed. If not, the inventory does not have enough of this item.
 function Inventory:remove(id, quantity)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -168,6 +184,9 @@ end
 ---@param quantity? integer Defaults to 1
 ---@param data? any
 function Inventory:addToSlot(slotIndex, id, quantity, data)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
@@ -214,6 +233,9 @@ end
 ---@param quantity? integer Defaults to 1
 ---@param data? any
 function Inventory:setSlot(slotIndex, id, quantity, data)
+	if not mod.itemDefs[id] then
+		error('unknown item ID "' .. id .. '"', 2)
+	end
 	if type(id) == "string" then
 		id = mod.itemDefs[id].index
 	end
