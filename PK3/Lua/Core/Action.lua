@@ -60,6 +60,7 @@ local ljclass = ljrequire "ljclass"
 ---@field x fixed_t
 ---@field y fixed_t
 ---@field z fixed_t
+---@field scale fixed_t
 
 
 ---@class player_t
@@ -737,7 +738,7 @@ function mod.findAimedFOF(player)
 			and fofTop >= P_GetZAt(s.f_slope, x, y, s.floorheight) -- FOF above the ground?
 			and fof.flags & FF_SWIMMABLE then
 				z = min(max(z, fofBottom), fofTop)
-				return { fof=fof, x=x, y=y, z=z }
+				return { fof=fof, x=x, y=y, z=z, scale=FU }
 			end
 		end
 
