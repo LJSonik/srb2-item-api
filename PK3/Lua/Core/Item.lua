@@ -181,6 +181,24 @@ function mod.addItem(id, def)
 	end
 end
 
+---Partially overrides the definition of an existing item type
+---NOTE: Currently only supported for simple fields.
+---@param id string
+---@param newDef itemapi.ItemDef
+function mod.editItem(id, newDef)
+	if type(id) ~= "string" then
+		error("missing or invalid item ID", 2)
+	end
+
+	local def = mod.itemDefs[id]
+
+	parseDef(newDef)
+
+	for name, value in pairs(newDef) do
+		def[name] = value
+	end
+end
+
 ---Registers a new item template
 ---@param id string
 ---@param def table|fun(def: itemapi.ItemDef): itemapi.ItemDef
