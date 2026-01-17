@@ -98,7 +98,7 @@ end
 ---@generic T
 ---@param array T[]
 ---@param index integer
-function mod.removeIndexFromUnorderedArrayAndUpdateField(array, index, fieldName)
+function mod.removeIndexFromUnorderedArrayAndUpdateIndexField(array, index, fieldName)
 	local lastIndex = #array
 	array[index] = array[lastIndex]
 	array[lastIndex] = nil

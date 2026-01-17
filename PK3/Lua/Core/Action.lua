@@ -281,7 +281,7 @@ function mod.despawnAction(action)
 	end
 
 	mod.stopActionAnimation(action)
-	mod.removeIndexFromUnorderedArrayAndUpdateField(mod.vars.actions, action.arrayIndex, "arrayIndex")
+	mod.removeIndexFromUnorderedArrayAndUpdateIndexField(mod.vars.actions, action.arrayIndex, "arrayIndex")
 end
 
 ---@param action itemapi.Action
