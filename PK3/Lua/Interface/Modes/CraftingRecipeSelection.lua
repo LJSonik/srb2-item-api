@@ -42,7 +42,7 @@ mod.addUIMode("crafting_recipe_selection", {
 
 		---@type itemapi.CraftingWindow
 		local craftingWindow = mod.CraftingWindow {
-			var_location = location,
+			location = location,
 
 			autoPosition = "center",
 

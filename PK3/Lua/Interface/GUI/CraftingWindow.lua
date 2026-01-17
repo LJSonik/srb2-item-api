@@ -76,8 +76,10 @@ CraftingWindow.def.baseProps = {
 	}
 }
 
-function CraftingWindow.def.setup(self)
+function CraftingWindow.def.setup(self, props)
 	mod.addMenuNavigationToItem(self, self.mainArea, self.onNavigationChange)
+
+	self.location = props.location
 
 	local index = 1
 	for _, recipe in ipairs(mod.craftingRecipeDefs) do
