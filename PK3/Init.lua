@@ -41,6 +41,7 @@ mod.ljrequire = ljrequire
 
 for _, filename in ipairs{
 	"Core/Util.lua",
+	"Core/Surface.lua",
 	"Core/Collision.lua",
 	"Core/CollisionMath.lua",
 	"Core/Core.lua",
