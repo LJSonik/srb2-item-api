@@ -132,12 +132,14 @@ end
 
 function mod.updateClient()
 	mod.updateInterface() -- !!! INTERFACE
+	mod.updateClientTickers()
 	mod.updateCulling()
 
 	mod.client.time = $ + 1
 end
 
 function mod.initialiseClientMap()
+	mod.client_initialiseTickers()
 	mod.initialiseVisualCulling()
 	mod.initialiseModelAvatars()
 
@@ -145,7 +147,7 @@ function mod.initialiseClientMap()
 end
 
 function mod.uninitialiseClientMap()
-	mod.uninitialiseClientTickers()
+	mod.client_uninitialiseTickers()
 	mod.uninitialiseVisualCulling()
 	mod.uninitialiseModelAvatars()
 	mod.uninitialiseActionTargetIcon() -- !!! INTERFACE
