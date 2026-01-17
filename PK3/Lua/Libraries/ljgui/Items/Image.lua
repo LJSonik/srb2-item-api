@@ -3,7 +3,13 @@ local gui = ljrequire "ljgui.common"
 
 
 ---@class ljgui.Image : ljgui.Item
-local Image, base = gui.class(gui.Item)
+local Image = gui.addItem("Image", {
+	applyCustomProps = function(image, props)
+		if props.image then
+			image:setImage(props.image)
+		end
+	end
+})
 gui.Image = Image
 
 
@@ -13,21 +19,6 @@ Image.defaultStyle = {
 	margin = { FU, FU, FU, FU }
 }
 
-
-function Image:__init(props)
-	base.__init(self)
-
-	self.debug = "Image"
-
-	if props then
-		self:setImage(props.image)
-		self:build(props)
-	end
-end
-
-function Image:build(props)
-	self:applyProps(props)
-end
 
 ---@param image string
 function Image:setImage(image)
@@ -41,5 +32,4 @@ function Image:draw(v)
 	local scale = self.width / patch.width
 
 	gui.drawPatchScaled(v, l, t, scale, patch)
-	self:drawChildren(v)
 end

@@ -47,11 +47,6 @@ for _, control in ipairs({
 end
 
 
----@class itemapi.ControlOptionsWindow : ljgui.Window
-local ControlOptionsWindow, base = gui.class(gui.Window)
-mod.ControlOptionsWindow = ControlOptionsWindow
-
-
 ---@param grid ljgui.Item
 ---@param key keyevent_t
 ---@return boolean
@@ -250,37 +245,45 @@ local function makeLine(cmd, grid, children)
 	-- })
 end
 
-function ControlOptionsWindow:__init(props)
-	local children = {}
-	for _, cmd in ipairs(mod.uiCommandDefs) do
-		makeLine(cmd, self, children)
+
+---@class itemapi.ControlOptionsWindow : ljgui.Window
+local ControlOptionsWindow = gui.addItem("ControlOptionsWindow", {
+	base = gui.Window,
+
+	baseProps = function(_, self)
+		local children = {}
+		for _, cmd in ipairs(mod.uiCommandDefs) do
+			makeLine(cmd, self, children)
+		end
+
+		self.grid = gui.Grid {
+			fitParent = true,
+
+			layout = "grid",
+			layout_gridColumns = 3,
+
+			onKeyPress = onKeyPress,
+
+			children = children
+		}
+
+		gui.addKeyboardNavigationToGrid(self.grid, onNavigation)
+
+		return {
+			size = { 256*FU, 160*FU },
+
+			movable = false,
+			resizable = false,
+
+			mainArea = {
+				layout = "one_per_line",
+
+				self.grid
+			}
+		}
 	end
-
-	self.grid = gui.Grid {
-		fitParent = true,
-
-		layout = "grid",
-		layout_gridColumns = 3,
-
-		onKeyPress = onKeyPress,
-
-		children = children
-	}
-
-	base.__init(self, {
-		size = { 256*FU, 160*FU },
-		layout = "one_per_line",
-
-		movable = false,
-		resizable = false,
-
-		self.grid
-	})
-
-	gui.addKeyboardNavigationToGrid(self.grid, onNavigation)
-
-	self:applyProps(props)
-end
+})
+mod.ControlOptionsWindow = ControlOptionsWindow
 
 
 mod.addMenu("control_options", {

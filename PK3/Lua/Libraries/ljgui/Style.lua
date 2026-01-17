@@ -16,7 +16,7 @@ local function applyStyleRules(item)
 			for i = 1, #rules do
 				local rule = rules[i]
 
-				if rule.class == item.__class then
+				if rule.class == item.class then
 					item:setStyle(rule)
 					return
 				end

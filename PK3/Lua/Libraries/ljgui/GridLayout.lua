@@ -6,7 +6,7 @@ local gui = ljrequire "ljgui.common"
 local function calculateColumnAndRowSizes(item)
 	local columnSizes, rowSizes = {}, {}
 	local curCol, curRow = 1, 1
-	local columns = item.layoutRules.gridColumns
+	local columns = item.layout.gridColumns
 
 	for _, child in item.children:iterate() do
 		local cr = child.layoutRules
@@ -26,11 +26,14 @@ local function calculateColumnAndRowSizes(item)
 	return columnSizes, rowSizes
 end
 
-gui.addAutoLayoutStrategy({
-	id = "Grid",
-	usedAttributes = { "width", "height" },
-	fields = { "gridColumns", "gridRows" },
-	generator = function(item)
+gui.addLayoutStrategy("grid", {
+	dependencies = {
+		{ "self", "width" },
+		{ "self", "height" },
+	},
+	params = { "gridColumns", "gridRows" },
+
+	compute = function(item)
 		local rules = item.layoutRules
 		local x, y = rules.leftPadding, rules.topPadding
 		local columnSizes, rowSizes = calculateColumnAndRowSizes(item)
@@ -48,7 +51,7 @@ gui.addAutoLayoutStrategy({
 			end
 
 			x = x + columnSizes[curCol]
-			curCol = ($ % rules.gridColumns) + 1
+			curCol = ($ % item.layout.gridColumns) + 1
 			if curCol == 1 then
 				x = rules.leftPadding
 				y = y + rowSizes[curRow]

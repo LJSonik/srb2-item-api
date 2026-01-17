@@ -8,7 +8,7 @@ local bs = ljrequire "bytestream"
 
 
 ---@class itemapi.CraftingWindow : ljgui.Window
-local CraftingWindow, base = gui.class(gui.Window)
+local CraftingWindow = gui.addItem("CraftingWindow", { base=gui.Window })
 mod.CraftingWindow = CraftingWindow
 
 
@@ -62,20 +62,22 @@ function CraftingWindow:onNavigationChange(oldElem, newElem)
 	end
 end
 
-function CraftingWindow:__init(props)
-	base.__init(self, {
-		size = { 192*FU, 160*FU },
 
-		movable = false,
-		resizable = false,
+CraftingWindow.def.baseProps = {
+	size = { 192*FU, 160*FU },
 
+	movable = false,
+	resizable = false,
+
+	onKeyPress = CraftingWindow.onKeyPress,
+
+	mainArea = {
 		layout = "one_per_line",
-		onKeyPress = self.onKeyPress
-	})
+	}
+}
 
+function CraftingWindow.def.setup(self)
 	mod.addMenuNavigationToItem(self, self.mainArea, self.onNavigationChange)
-
-	self:applyProps(props)
 
 	local index = 1
 	for _, recipe in ipairs(mod.craftingRecipeDefs) do

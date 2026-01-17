@@ -10,7 +10,17 @@ local gui = ljrequire "ljgui.common"
 ---@class ljgui.VerticalScrollbar : ljgui.Item
 ---@field style ljgui.VerticalScrollbarStyle
 ---@field targetItem? ljgui.Item
-local Scrollbar, base = gui.class(gui.Item)
+local Scrollbar = gui.addItem("VerticalScrollbar", {
+	setup = function(self)
+		self:addEvent("LeftMousePress", self.onLeftMousePress)
+	end,
+
+	applyCustomProps = function(self, props)
+		if props.target then
+			self:setTargetItem(props.target)
+		end
+	end,
+})
 gui.VerticalScrollbar = Scrollbar
 
 
@@ -24,24 +34,6 @@ Scrollbar.defaultStyle = {
 	cursorColor = 21,
 }
 
-
----@param props ljgui.ItemProps
-function Scrollbar:__init(props)
-	base.__init(self)
-
-	self.debug = "Scrollbar"
-
-	if props then
-		self:build(props)
-	end
-
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-end
-
-function Scrollbar:build(props)
-	self:applyProps(props)
-	self:setTargetItem(props.target)
-end
 
 ---@param x fixed_t
 ---@param y fixed_t
@@ -99,6 +91,4 @@ function Scrollbar:draw(v)
 	else
 		gui.drawFill(v, l, t, w, h, style.cursorColor)
 	end
-
-	self:drawChildren(v)
 end

@@ -7,18 +7,18 @@ local gui = ljrequire "ljgui.common"
 ---@field titleBarColor integer
 
 
----@class ljgui.Window : ljgui.Item
+---@class ljgui.Window : ljgui.Item, ljgui.MovableByMouseDrag, ljgui.ResizableByMouseDrag
 ---@field style ljgui.WindowStyle
 ---@field mainArea ljgui.Rectangle
----
----@field movable boolean
----@field moving  boolean
----
----@field resizable            boolean
----@field resizing             boolean
----@field resizingHorizontally integer
----@field resizingVertically   integer
-local Window, base = gui.class(gui.Item)
+local Window = gui.addItem("Window", {
+	features = { gui.MovableByMouseDrag, gui.ResizableByMouseDrag },
+
+	applyCustomProps = function(self, props)
+		if props.title then
+			self:setTitle(props.title)
+		end
+	end
+})
 gui.Window = Window
 
 
@@ -30,148 +30,107 @@ Window.defaultStyle = {
 	bdColor = 25,
 
 	titleBarSize = 8*FU,
-	titleBarColor = 28,
+	titleBarColor = 26,
 
 	bgColor = 31
 }
 
 
----@type ljgui.AutoLayoutStrategy
-Window.layoutStrategy = {
-	id = "Window.layoutStrategy",
+Window.layoutStrategy = gui.addLayoutStrategy(nil, {
 	---@param window ljgui.Window
-	generator = function(window)
+	compute = function(window)
 		local l, t = window:getMainAreaPosition()
 		window.mainArea:moveRaw(l, t)
 	end
-}
+})
 
----@type ljgui.AutoPositionOrSizeStrategy
-Window.windowSizeFromMainAreaStrategy = {
-	id = "Window.windowSizeFromMainAreaStrategy",
-	type = "children",
-	usedAttributes = { "width", "height" },
+Window.windowWidthFromMainAreaStrategy = gui.addAutoStrategy(nil, "width", {
+	dependencyType = "children",
+	dependency = {"children", "width" },
+
 	---@param window ljgui.Window
-	generator = function(window)
-		local mainArea = window.mainArea
-		local style = window.style
-		local l, t = window:getMainAreaPosition()
-
-		local w = l + mainArea.width + style.bdSize
-		local h = t + mainArea.height + style.bdSize
-		return w, h
+	compute = function(window)
+		local l, _ = window:getMainAreaPosition()
+		local w = l + window.mainArea.width + window.style.bdSize
+		window:resize(w, nil)
 	end
-}
+})
 
----@type ljgui.AutoPositionOrSizeStrategy
-Window.mainAreaSizeFromWindowStrategy = {
-	id = "Window.mainAreaSizeFromWindowStrategy",
-	type = "parent",
-	usedAttributes = { "width", "height" },
-	generator = function(mainArea)
-		return mainArea.parent:getMainAreaSize()
+Window.windowHeightFromMainAreaStrategy = gui.addAutoStrategy(nil, "height", {
+	dependencyType = "children",
+	dependency = { "children", "height" },
+
+	---@param window ljgui.Window
+	compute = function(window)
+		local _, t = window:getMainAreaPosition()
+		local h = t + window.mainArea.height + window.style.bdSize
+		window:resize(nil, h)
 	end
-}
+})
 
+Window.mainAreaWidthFromWindowStrategy = gui.addAutoStrategy(nil, "width", {
+	dependencyType = "parent",
+	dependency = {"parent", "width" },
 
----@param props? ljgui.ItemProps
-function Window:__init(props)
-	base.__init(self)
-
-	self.debug = "Window"
-
-	if props then
-		self:build(props)
+	compute = function(mainArea)
+		local w, _ = mainArea.parent:getMainAreaSize()
+		mainArea:resize(w, nil)
 	end
+})
+
+Window.mainAreaHeightFromWindowStrategy = gui.addAutoStrategy(nil, "height", {
+	dependencyType = "parent",
+	dependency = { "parent", "height" },
+
+	compute = function(mainArea)
+		local _, h = mainArea.parent:getMainAreaSize()
+		mainArea:resize(nil, h)
+	end
+})
+
+---@param self ljgui.Window
+---@param props ljgui.ItemProps
+function Window.def.setup(self, props)
+	self:setMovableByMouseDrag(true)
+	self:setResizableByMouseDrag(true)
 
 	self:prioritiseMouseEvents()
 
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-	self:addEvent("MouseMove", self.onMouseMove)
-	self:addEvent("MouseLeave", self.onMouseLeave)
+	self:addEvent("LeftMousePress", self.movableByMouseDrag_onLeftMousePress)
+	self:addEvent("LeftMousePress", self.resizableByMouseDrag_onLeftMousePress)
+	self:addEvent("MouseMove", self.resizableByMouseDrag_onMouseMove)
+	self:addEvent("MouseLeave", self.movableByMouseDrag_onMouseLeave)
+	self:addEvent("MouseLeave", self.resizableByMouseDrag_onMouseLeave)
+
+	---@type ljgui.Rectangle
+	local mainArea = gui.Rectangle(props.mainArea or {})
+	self.mainArea = mainArea:attach(self)
+
+	-- This layout will be used to always keep the main area at the correct offsets
+	self:setLayout({ strategy = Window.layoutStrategy })
+
+	-- Decide whether to make the content depend on the window or the other way around based on auto-attributes
+	local autoWidth, autoHeight = mainArea.autoAttributes.width, mainArea.autoAttributes.height
+	local wStrategy = autoWidth  and gui.autoAttributeStrategies["width" ][autoWidth.strategy ] or nil
+	local hStrategy = autoHeight and gui.autoAttributeStrategies["height"][autoHeight.strategy] or nil
+
+	if not wStrategy then
+		gui.setItemAutoAttribute(mainArea, "width", { strategy = Window.mainAreaWidthFromWindowStrategy })
+	elseif wStrategy.dependencyType ~= "parent" and not self.autoAttributes.width then
+		gui.setItemAutoAttribute(self, "width", { strategy = Window.windowWidthFromMainAreaStrategy })
+	end
+
+	if not hStrategy then
+		gui.setItemAutoAttribute(mainArea, "height", { strategy = Window.mainAreaHeightFromWindowStrategy })
+	elseif hStrategy.dependencyType ~= "parent" and not self.autoAttributes.height then
+		gui.setItemAutoAttribute(self, "height", { strategy = Window.windowHeightFromMainAreaStrategy })
+	end
 end
 
----@param props? ljgui.ItemProps
-function Window:build(props)
-	self:applyProps(props)
-	self.mainArea:attach(self)
-
-	self:setTitle(props.title)
-
-	if props.movable ~= nil then
-		self:setMovable(props.movable)
-	else
-		self:setMovable(true)
-	end
-
-	if props.resizable ~= nil then
-		self:setResizable(props.resizable)
-	else
-		self:setResizable(true)
-	end
-end
-
----@param props? ljgui.ItemProps
-function Window:applyProps(props)
-	if not props then return end
-
-	gui.parseItemProps(self, props)
-
-	local children, autoLayout, autoSize
-	if props then
-		children, props.children = $2, {}
-		autoLayout, props.layoutRules.autoLayout = $2, nil
-		autoSize, props.layoutRules.autoSize = $2, nil
-	end
-
-	gui.applyItemProps(self, props)
-
-	self.mainArea = $ or gui.Rectangle {
-		id = "MainArea", -- !!! DBG
-		children = children,
-		autoLayout = autoLayout,
-		autoSize = autoSize,
-		style = {}
-	}
-
-	local wRules = self.layoutRules or {}
-	local mRules = self.mainArea.layoutRules or {}
-	wRules.autoLayout = Window.layoutStrategy
-	if mRules.autoSize and mRules.autoSize.type == "children" then
-		wRules.autoSize = Window.windowSizeFromMainAreaStrategy
-	else
-		mRules.autoSize = Window.mainAreaSizeFromWindowStrategy
-	end
-	self:updateLayoutRules(wRules)
-	self.mainArea:updateLayoutRules(mRules)
-
-	-- local wRules = self.layoutRules or {}
-	-- local mRules = self.mainArea.layoutRules or {}
-	-- mRules.autoLayout = wRules.autoLayout
-	-- wRules.autoLayout = Window.layoutStrategy
-	-- if wRules.autoSize and wRules.autoSize.type == "children" then
-	-- 	mRules.autoSize = wRules.autoSize
-	-- 	wRules.autoSize = Window.windowSizeFromMainAreaStrategy
-	-- else
-	-- 	mRules.autoSize = Window.mainAreaSizeFromWindowStrategy
-	-- end
-	-- self:updateLayoutRules(wRules)
-	-- self.mainArea:updateLayoutRules(mRules)
-end
 
 ---@param title string
 function Window:setTitle(title)
 	self.title = title
-end
-
----@param movable boolean
-function Window:setMovable(movable)
-	self.movable = movable
-end
-
----@param resizable boolean
-function Window:setResizable(resizable)
-	self.resizable = resizable
 end
 
 ---@return fixed_t
@@ -210,6 +169,15 @@ function Window:isPointInTitleBar(x, y)
 	return not self:isPointInBorder(x, y)
 	and y - self.cachedTop < self.style.bdSize + self.style.titleBarSize
 end
+
+function Window:canMoveByMouseDragAtPoint(x, y)
+	return self:isPointInTitleBar(x, y)
+end
+
+function Window:canResizeByMouseDragAtPoint(x, y)
+	return self:isPointInBorder(x, y)
+end
+
 
 ---@param item ljgui.Item
 local function fallTicker(item)
@@ -251,157 +219,6 @@ end
 -- 	end
 -- end
 
----@return number
----@return number
-function Window:getPointedBorders()
-	local mouse = gui.instance.mouse
-	local x = mouse.x - self.cachedLeft
-	local y = mouse.y - self.cachedTop
-	local bs = max(self.style.bdSize, 4*FU)
-
-	local h = 0
-	if x < bs then
-		h = -1
-	elseif x >= self.width - bs then
-		h = 1
-	end
-
-	local v = 0
-	if y < bs then
-		v = -1
-	elseif y >= self.height - bs then
-		v = 1
-	end
-
-	return h, v
-end
-
-function Window:startMove()
-	self.moving = true
-	gui.instance.mouse:startItemDragging(self, self.updateMove, self.stopMove)
-end
-
-function Window:updateMove()
-	local mouse = gui.instance.mouse
-	local dx = mouse.x - mouse.oldX
-	local dy = mouse.y - mouse.oldY
-	self:move(self.left + dx, self.top + dy)
-end
-
-function Window:stopMove()
-	self.moving = false
-end
-
-function Window:startResize()
-	self.resizing = true
-	self.resizingHorizontally, self.resizingVertically = self:getPointedBorders()
-	gui.instance.mouse:startItemDragging(self, self.updateResize, self.stopResize)
-end
-
----@param mouse ljgui.Mouse
-function Window:updateResize(mouse)
-	-- local mouse = gui.instance.mouse
-	local x = mouse.x - self.parent.cachedLeft
-	local y = mouse.y - self.parent.cachedTop
-	-- local dx = mouse.x - mouse.oldX
-	-- local dy = mouse.y - mouse.oldY
-
-	local l, t = self.left, self.top
-	local r, b = l + self.width, t + self.height
-	local minSize = 64*FU
-
-	if self.resizingHorizontally == -1 then
-		l = min(x, r - minSize)
-	elseif self.resizingHorizontally == 1 then
-		r = max(x, l + minSize)
-	end
-
-	if self.resizingVertically == -1 then
-		t = min(y, b - minSize)
-	elseif self.resizingVertically == 1 then
-		b = max(y, t + minSize)
-	end
-
-	-- if self.resizingHorizontally == -1 then
-	-- 	l = min(l + dx, r - minSize)
-	-- elseif self.resizingHorizontally == 1 then
-	-- 	r = max(r + dx, l + minSize)
-	-- end
-
-	-- if self.resizingVertically == -1 then
-	-- 	t = min(t + dy, b - minSize)
-	-- elseif self.resizingVertically == 1 then
-	-- 	b = max(b + dy, t + minSize)
-	-- end
-
-	self:move(l, t)
-	self:resize(r - l, b - t)
-end
-
-function Window:stopResize()
-	self.resizing = false
-	self.resizingHorizontally, self.resizingVertically = 0, 0
-end
-
----@param mouse ljgui.Mouse
----@return boolean?
-function Window:onMouseMove(mouse)
-	if not self.resizable or self.moving or self.resizing then return end
-
-	local h, v = self:getPointedBorders()
-
-	local suffix = ""
-	if h then
-		suffix = v and "_RESIZEHV" or "_RESIZEH"
-	else
-		suffix = v and "_RESIZEV" or ""
-	end
-
-	mouse:setImage("LJGUI_CURSOR" .. suffix)
-	mouse:flipImage(h ~= v)
-
-	return (suffix ~= "")
-end
-
-function Window:onMouseLeave()
-	if not (self.moving or self.resizing) then
-		gui.instance.mouse:setImage("LJGUI_CURSOR")
-		gui.instance.mouse:flipImage(false)
-	end
-end
-
----@param mouse ljgui.Mouse
----@return boolean
-function Window:onLeftMousePress(mouse)
-	if self.resizable and self:isPointInBorder(mouse.x, mouse.y) then
-		self:startResize()
-		return true
-	elseif self.movable and self:isPointInTitleBar(mouse.x, mouse.y) then
-		self:startMove()
-		return true
-	else
-		return false
-	end
-end
-
--- function Window:onLeftMouseRelease()
--- 	if self.moving then
--- 		self:stopMove()
--- 	elseif self.resizing then
--- 		self:stopResize()
--- 	end
--- end
-
--- ---@param width fixed_t
--- ---@param height fixed_t
--- function Window:resize(width, height)
--- 	base.resize(self, width, height)
-
--- 	if self.mainArea then
--- 		self.mainArea:resize(self:getMainAreaSize())
--- 	end
--- end
-
 function Window:getBaseBorder()
 	local style = self.style
 	local bdSize = style.bdSize
@@ -421,5 +238,4 @@ function Window:draw(v)
 	if self.title then
 		gui.drawString(v, l + bs + 2*FU, t + bs + 2*FU, self.title) -- Title
 	end
-	self:drawChildren(v)
 end

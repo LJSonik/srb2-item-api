@@ -5,7 +5,7 @@ local gui = ljrequire "ljgui.common"
 ---@class ljgui.ListBox : ljgui.Item
 ---@field grid ljgui.Grid
 ---@field maxHeight? fixed_t
-local ListBox, base = gui.class(gui.Item)
+local ListBox = gui.addItem("ListBox")
 gui.ListBox = ListBox
 
 
@@ -41,24 +41,17 @@ local function onNavigation(grid, oldElem, newElem)
 	end
 end
 
+---@param self ljgui.ListBox
 ---@param props ljgui.ItemProps
-function ListBox:__init(props)
-	base.__init(self)
-
-	self.debug = "ListBox"
-	self.options = {}
-
-	if props then
-		self:build(props)
-		self.options = props.options or $
-	end
+ListBox.def.setup = function(self, props)
+	self.options = props.options or {}
 
 	local children = {}
 	for _, option in ipairs(self.options) do
 		table.insert(children, gui.Button {
 			text = option[2],
 			var_value = option[1],
-			autoWidth = "FitParent",
+			autoWidth = "fit_parent",
 			height = 6*FU,
 			style = elementStyle,
 			onTrigger = onElementTrigger
@@ -67,8 +60,9 @@ function ListBox:__init(props)
 
 	self.grid = gui.Grid {
 		fitParent = true,
-		autoLayout = "Grid",
-		gridColumns = 1,
+
+		layout = "grid",
+		layout_gridColumns = 1,
 
 		children = children
 	}
@@ -79,14 +73,15 @@ function ListBox:__init(props)
 		gui.VerticalScrollbar {
 			target = self.grid,
 
-			autoHeight = "FitParent",
-			autoLeft = "SnapToParentRight"
+			autoHeight = "fit_parent",
+			autoLeft = "snap_to_parent_right"
 		}
 	})
 
 	self:setMaxHeight(self.maxHeight)
 	gui.addKeyboardNavigationToGrid(self.grid, onNavigation)
 end
+
 
 ---@param height fixed_t
 function ListBox:setMaxHeight(height)
@@ -96,7 +91,6 @@ end
 
 function ListBox:draw(v)
 	gui.drawBaseItemStyle(v, self, self.style)
-	self:drawChildren(v)
 end
 
 
@@ -107,6 +101,7 @@ end
 function gui.spawnListBoxAtItem(item, container, props)
 	---@type ljgui.ListBox
 	local list = gui.ListBox(props)
+	list.depth = 1000
 	list:resize(item.width, nil)
 	list:updateLayoutRules{ placementMode = "exclude" }
 	list:move(item.cachedLeft - container.cachedLeft, item.cachedTop + item.height - container.cachedTop)

@@ -15,7 +15,7 @@ local gui = ljrequire "ljgui.common"
 ---@field itemEvents         table<ljgui.Item, table<ljgui.EventType, ljgui.Event[]>>
 ---@field detachedItemEvents table<ljgui.Item, table<ljgui.EventType, ljgui.Event[]>>
 ---@field itemsByEventType   table<ljgui.EventType, ljgui.Set<ljgui.Item>>
-local Manager = gui.class()
+local Manager, base = gui.class()
 gui.EventManager = Manager
 
 

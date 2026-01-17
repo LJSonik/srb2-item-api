@@ -5,8 +5,8 @@ local gui = ljrequire "ljgui.common"
 ---@param item ljgui.Item
 local function generateWithHorizontalMainDirection(item)
 	local rules = item.layoutRules
-	local mainDirection = rules.mainDirection or "down"
-	local secondDirection = rules.secondDirection or "right"
+	local mainDirection = item.layout.mainDirection or "down"
+	local secondDirection = item.layout.secondDirection or "right"
 	local dy = (secondDirection == "up") and -1 or 1
 	local dx = (mainDirection == "left") and -1 or 1
 	local itemContentHeight = item.contentHeight
@@ -95,8 +95,8 @@ end
 ---@param item ljgui.Item
 local function generateWithVerticalMainDirection(item)
 	local rules = item.layoutRules
-	local mainDirection = rules.mainDirection or "down"
-	local secondDirection = rules.secondDirection or "right"
+	local mainDirection = item.layout.mainDirection or "down"
+	local secondDirection = item.layout.secondDirection or "right"
 	local dx = (secondDirection == "left") and -1 or 1
 	local dy = (mainDirection == "up") and -1 or 1
 	local itemContentWidth = item.contentWidth
@@ -182,13 +182,17 @@ local function generateWithVerticalMainDirection(item)
 	end
 end
 
-gui.addAutoLayoutStrategy({
-	id = "Flow",
-	usedAttributes = { "width", "height" },
-	usedSelfAttributes = { "width", "height" },
-	fields = { "mainDirection", "secondDirection" },
-	generator = function(item)
-		local mainDirection = item.layoutRules.mainDirection or "down"
+gui.addLayoutStrategy("flow", {
+	dependencies = {
+		{ "self", "width" },
+		{ "self", "height" },
+		{ "children", "width" },
+		{ "children", "height" },
+	},
+	params = { "mainDirection", "secondDirection" },
+
+	compute = function(item)
+		local mainDirection = item.layout.mainDirection or "down"
 
 		if mainDirection == "left" or mainDirection == "right" then
 			generateWithHorizontalMainDirection(item)
@@ -197,44 +201,3 @@ gui.addAutoLayoutStrategy({
 		end
 	end
 })
-
--- gui.addAutoLayoutStrategy({
--- 	id = "Flow",
--- 	usedAttributes = { "width", "height" },
--- 	usedSelfAttributes = { "width", "height" },
--- 	generator = function(item)
--- 		local prevLineHeight = 0
--- 		local rules = item.layoutRules
--- 		local leftPadding = rules.leftPadding
--- 		local topPadding = rules.topPadding
--- 		local itemWidth = item.contentWidth
--- 		local x = leftPadding
--- 		local y = topPadding
-
--- 		for _, child in item.children:iterate() do
--- 			local cr = child.layoutRules
--- 			if not cr then continue end
-
--- 			local mode = cr.placementMode
--- 			if mode == "exclude" then continue end
-
--- 			local w = child.width + cr.leftMargin + cr.rightMargin
-
--- 			if x + w > itemWidth and x ~= leftPadding then
--- 				x = leftPadding
--- 				y = y + prevLineHeight + cr.topMargin + cr.bottomMargin
--- 				prevLineHeight = 0
--- 			end
-
--- 			if prevLineHeight < child.height then
--- 				prevLineHeight = child.height
--- 			end
-
--- 			if mode == "include" then
--- 				child:moveRaw(x + cr.leftMargin, y + cr.topMargin)
--- 			end
-
--- 			x = x + w
--- 		end
--- 	end
--- })

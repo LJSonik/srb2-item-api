@@ -18,9 +18,10 @@ local FU = FRACUNIT
 ---@field draggedItemStopCallback fun(item: ljgui.Item, mouse: ljgui.Mouse)?
 ---
 ---@field enabled boolean
+---@field interacting boolean
 ---@field image string
 ---@field flipped boolean
-local Mouse = gui.class()
+local Mouse, base = gui.class()
 gui.Mouse = Mouse
 
 
@@ -31,6 +32,7 @@ function Mouse:__init()
 	self.pointedItems = {}
 
 	self:enable()
+	self:setInteracting(false)
 	self:setImage("LJGUI_CURSOR")
 	self:flipImage(false)
 end
@@ -45,6 +47,11 @@ end
 
 function Mouse:disable()
 	self.enabled = false
+end
+
+---@param interacting boolean
+function Mouse:setInteracting(interacting)
+	self.interacting = interacting
 end
 
 ---@param image string Name of the patch used to draw the cursor
@@ -112,7 +119,7 @@ function Mouse:findPointedItems(item, pointedItems)
 		pointedItems[item] = true
 	end
 
-	for _, child in item.children:reverseIterate() do
+	for _, child in item.children:iterate() do
 		self:findPointedItems(child, pointedItems)
 	end
 
@@ -158,6 +165,11 @@ function Mouse:updateDragging()
 	local item = self.draggedItem
 	if not item then return end
 
+	if not item.rooted then
+		self:stopItemDragging()
+		return
+	end
+
 	self.draggedItemTickCallback(item, self)
 end
 
@@ -170,6 +182,8 @@ function Mouse:startItemDragging(item, onTick, onStop)
 	self.draggedItem = item
 	self.draggedItemTickCallback = onTick
 	self.draggedItemStopCallback = onStop
+
+	self:setInteracting(true)
 end
 
 function Mouse:stopItemDragging()
@@ -180,6 +194,8 @@ function Mouse:stopItemDragging()
 	self.draggedItem = nil
 	self.draggedItemTickCallback = nil
 	self.draggedItemStopCallback = nil
+
+	self:setInteracting(false)
 end
 
 ---@return boolean

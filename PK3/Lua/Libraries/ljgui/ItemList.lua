@@ -4,7 +4,7 @@ local gui = ljrequire "ljgui.common"
 
 ---@class ljgui.ItemList
 ---@field items ljgui.Item[]
-local List = gui.class()
+local List, base = gui.class()
 gui.ItemList = List
 
 

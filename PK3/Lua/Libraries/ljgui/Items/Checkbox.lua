@@ -10,7 +10,21 @@ local gui = ljrequire "ljgui.common"
 ---@field style ljgui.CheckboxStyle
 ---@field checked boolean
 ---@field pressed boolean
-local Checkbox, base = gui.class(gui.Item)
+local Checkbox = gui.addItem("Checkbox", {
+	setup = function(self)
+		self.pressed = false
+		self.checked = false
+
+		self:addEvent("LeftMousePress", self.onLeftMousePress)
+		self:addEvent("KeyPress", self.onKeyPress)
+	end,
+
+	applyCustomProps = function(self, props)
+		if props.checked ~= nil then
+			self.checked = props.checked
+		end
+	end,
+})
 gui.Checkbox = Checkbox
 
 
@@ -24,29 +38,6 @@ Checkbox.defaultStyle = {
 	checkColor = 112,
 }
 
-
-function Checkbox:__init(props)
-	base.__init(self)
-
-	self.debug = "Checkbox"
-
-	if props then
-		self:build(props)
-	end
-
-	self.pressed = false
-
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-	self:addEvent("KeyPress", self.onKeyPress)
-end
-
-function Checkbox:build(props)
-	self:applyProps(props)
-
-	if props.checked then
-		self.checked = true
-	end
-end
 
 function Checkbox:onLeftMousePress()
 	self.pressed = true
@@ -88,6 +79,4 @@ function Checkbox:draw(v)
 
 		gui.drawFill(v, l + pad, t + pad, w - pad * 2, h - pad * 2, style.checkColor)
 	end
-
-	self:drawChildren(v)
 end

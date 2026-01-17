@@ -13,21 +13,32 @@ local gui = ljrequire "ljgui.common"
 ---@field bdColor? integer
 ---@field margin? table
 
+
+---@class ljgui.ItemDef : ljgui.Class
+---@field base? ljgui.Item
+---@field features ljgui.FeatureDef[]
+---
+---@field baseProps? ljgui.ItemProps|fun(props: ljgui.ItemProps, item: ljgui.Item): ljgui.ItemProps
+---@field applyCustomProps? fun(item, props: ljgui.ItemProps)
+---@field transformProps? fun(props: any): any
+---@field setup? fun(item: ljgui.Item, props: ljgui.ItemProps)
+
+
 ---@class ljgui.Item : ljgui.Class
+---@field def ljgui.ItemDef
 ---@field depth                  integer
 ---@field props                  ljgui.ItemProps
 ---@field mouseEventsPrioritised boolean
 ---@field getBaseBorder          ljgui.BaseBorderGetter
 ---
----@field parent?    ljgui.Item
----@field children   ljgui.ItemList
----@field rooted     boolean
+---@field parent?  ljgui.Item
+---@field children ljgui.ItemList
+---@field rooted   boolean
 ---
----@field modifiedAttributes     ljgui.Set<string>
----@field attributeRootDistances table<string, integer>
+---@field layout       ljgui.Layout
+---@field layoutRules? ljgui.LayoutRules
 ---
----@field layoutGenerated boolean
----@field layoutRules?     ljgui.LayoutRules
+---@field autoAttributes { [string]: ljgui.AutoAttribute }
 ---
 ---@field left        fixed_t
 ---@field top         fixed_t
@@ -45,9 +56,10 @@ local gui = ljrequire "ljgui.common"
 ---@field viewLeft   fixed_t
 ---@field viewTop    fixed_t
 ---
----@field style         ljgui.ItemStyle
----@field styleRules    ljgui.ItemStyle
----@field defaultStyle  ljgui.ItemStyle
+---@field style        ljgui.ItemStyle
+---@field styles       { [string]: ljgui.ItemStyle }
+---@field styleRules   ljgui.ItemStyle
+---@field defaultStyle ljgui.ItemStyle
 local Item = gui.class()
 gui.Item = Item
 
@@ -65,9 +77,6 @@ Item.defaultStyle = {}
 
 function Item:__init()
 	self.depth = 0
-	self.layoutGenerated = true
-	self.modifiedAttributes = {}
-	self.attributeRootDistances = {}
 
 	self.children = gui.ItemList()
 	self.rooted = false
@@ -80,31 +89,45 @@ function Item:__init()
 
 	self.scrollable = false
 	self.viewLeft, self.viewTop = 0, 0
+
+	self.autoAttributes = {}
 end
 
 ---@param props? ljgui.ItemProps
-function Item:build(props)
+function Item:applyCustomProps(props)
 	gui.applyItemProps(self, props)
+end
+
+local function applyCustomProps(item, class, props)
+	if class == Item then return end
+
+	if class.base then
+		applyCustomProps(item, class.base, props)
+	end
+
+	local def = class.def
+	if def.applyCustomProps then
+		def.applyCustomProps(item, props)
+	end
+
+	for _, feature in ipairs(class.def.features) do
+		local def = feature.def
+		if def.applyCustomProps then
+			def.applyCustomProps(item, props)
+		end
+	end
 end
 
 ---@param props? ljgui.ItemProps
 function Item:applyProps(props)
 	gui.applyItemProps(self, props)
+	applyCustomProps(self, self.class, props)
 end
-
--- function Item:unsetLayoutGenerated()
--- 	if self.layoutGenerated then
--- 		self.layoutGenerated = false
--- 		table.insert(gui.instance.itemLayoutsToGenerate, self)
--- 	end
--- end
 
 ---@param attributeName string
 function Item:markAttributeAsModified(attributeName)
-	if self.rooted then
-		gui.instance.itemsWithModifiedAttributes[self] = true
-	end
-	self.modifiedAttributes[attributeName] = true
+	if not self.rooted then return end -- !!! Bug?
+	gui.instance.dependencyManager:markAttributeAsModified(self, attributeName)
 end
 
 ---@param x fixed_t
@@ -122,6 +145,11 @@ function Item:isPointInside(x, y)
 	end
 
 	return true
+end
+
+---@param layout? ljgui.Layout
+function Item:setLayout(layout)
+	gui.setItemLayout(self, layout)
 end
 
 ---@param rules ljgui.LayoutRules
@@ -147,6 +175,11 @@ function Item:updateStyle(style)
 	self.style = gui.merge(self.style, style)
 end
 
+---@param styles table
+function Item:setStyles(styles)
+	self.styles = styles
+end
+
 ---@param rules table
 function Item:setStyleRules(rules)
 	self.styleRules = rules
@@ -157,14 +190,14 @@ end
 
 ---@param v videolib
 function Item:drawChildren(v)
-	local l, t = self.cachedLeft, self.cachedTop
-	if gui.pushDrawRegion(v, l, t, l + self.width, t + self.height) then
-		for _, child in self.children:iterate() do
-			child:draw(v)
-		end
+	-- local l, t = self.cachedLeft, self.cachedTop
+	-- if gui.pushDrawRegion(v, l, t, l + self.width, t + self.height) then
+	-- 	for _, child in self.children:iterate() do
+	-- 		child:draw(v)
+	-- 	end
 
-		gui.popDrawRegion()
-	end
+	-- 	gui.popDrawRegion()
+	-- end
 end
 
 ---@param v videolib
@@ -175,7 +208,7 @@ end
 
 --#region item tree methods
 
----@param parent any
+---@param parent ljgui.Item
 ---@return ljgui.Item
 function Item:attach(parent)
 	self.parent = parent
@@ -184,13 +217,30 @@ function Item:attach(parent)
 
 	self:cachePosition()
 
+	if self.rooted then
+		gui.updateAutoAttributeDependenciesAfterAttachingChild(self)
+		gui.updateLayoutDependenciesAfterAttachingChild(self)
+	end
+
 	return self
 end
 
 function Item:detach()
+	local parent = self.parent
+
+	if self.rooted then
+		gui.updateAutoAttributeDependenciesBeforeDetachingChild(self)
+		gui.updateLayoutDependenciesBeforeDetachingChild(self)
+	end
+
+	if parent.layout then
+		gui.instance.dependencyManager:removeDependency(parent, "layout", self, "left")
+		gui.instance.dependencyManager:removeDependency(parent, "layout", self, "top")
+	end
+
 	self:setRooted(false)
 
-	self.parent.children:remove(self)
+	parent.children:remove(self)
 	self.parent = nil
 end
 
@@ -204,6 +254,11 @@ function Item:setRooted(rooted)
 		self:markAttributeAsModified("rooted")
 		gui.instance.eventManager:attachItemEvents(self)
 
+		gui.updateLayoutDependenciesAfterRootingItem(self)
+		for attr in pairs(self.autoAttributes) do
+			gui.updateAutoAttributeDependenciesAfterRootingItem(self, attr)
+		end
+
 		self:update()
 
 		-- !!! Experimental
@@ -212,10 +267,14 @@ function Item:setRooted(rooted)
 		-- !!! Experimental
 		gui.instance.eventManager:callItemEvent(self, "Unroot")
 
-		self.rooted = rooted
+		gui.updateLayoutDependenciesBeforeUnrootingItem(self)
+		for attr in pairs(self.autoAttributes) do
+			gui.updateAutoAttributeDependenciesBeforeUnrootingItem(self, attr)
+		end
 
-		gui.instance.itemsWithModifiedAttributes[self] = nil
 		gui.instance.eventManager:detachItemEvents(self)
+
+		self.rooted = rooted
 	end
 
 	for _, child in self.children:iterate() do
@@ -428,6 +487,7 @@ end)
 
 local fixedFields = gui.arrayToSet{
 	"left", "top",
+	"viewLeft", "viewTop",
 	"cachedLeft", "cachedTop",
 
 	"width", "height",
@@ -437,7 +497,7 @@ local fixedFields = gui.arrayToSet{
 function Item:dump(text, prefix)
 	local pr = pr or print
 
-	text = $ or "item"
+	text = (text or "item") .. "(" .. (self.id or "?") .. ": ".. (self.debug or "?") .. ")"
 	prefix = $ or ""
 
 	pr(prefix .. text .. " = {")
@@ -450,6 +510,11 @@ function Item:dump(text, prefix)
 		else
 			pr(prefix .. "    " .. tostring(k) .. " = " .. tostring(v))
 		end
+	end
+
+	if self.layout then
+		local strategy = gui.layoutStrategies[self.layout.strategy]
+		pr(prefix .. "    layout = " .. (strategy.id or "?"))
 	end
 
 	for _, child in self.children:iterate() do
@@ -469,6 +534,10 @@ end
 
 function Item:dumpSize()
 	pr(dec(self.width) .. " " .. dec(self.height))
+end
+
+function Item:__tostring()
+	return self.id or self.debug or "?"
 end
 
 --#endregion

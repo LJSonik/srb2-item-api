@@ -13,7 +13,27 @@ local gui = ljrequire "ljgui.common"
 ---@field value    number
 ---@field valueMin number
 ---@field valueMax number
-local Slider, base = gui.class(gui.Item)
+local Slider = gui.addItem("Slider", {
+	setup = function(self)
+		self.valueMin, self.valueMax = 0, FU
+		self.value = (self.valueMin + self.valueMax) / 2
+
+		self:addEvent("LeftMousePress", self.onLeftMousePress)
+		-- self:addEvent("MouseEnter", self.onMouseEnter)
+		-- self:addEvent("MouseLeave", self.onMouseLeave)
+	end,
+
+	applyCustomProps = function(self, props)
+		if props.action then
+			self:addEvent("ValueChange", props.action)
+		end
+
+		if props.range then
+			self.valueMin, self.valueMax = props.range[1], props.range[2]
+			self.value = (self.valueMin + self.valueMax) / 2
+		end
+	end,
+})
 gui.Slider = Slider
 
 
@@ -29,37 +49,6 @@ Slider.defaultStyle = {
 	margin = { FU, FU, FU, FU }
 }
 
-
----@param props ljgui.ItemProps
-function Slider:__init(props)
-	base.__init(self)
-
-	self.valueMin, self.valueMax = 0, FU
-
-	self.debug = "Slider"
-
-	if props then
-		self:build(props)
-	end
-
-	self.value = (self.valueMin + self.valueMax) / 2
-
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-	-- self:addEvent("MouseEnter", self.onMouseEnter)
-	-- self:addEvent("MouseLeave", self.onMouseLeave)
-end
-
-function Slider:build(props)
-	self:applyProps(props)
-
-	if props.action then
-		self:addEvent("ValueChange", props.action)
-	end
-
-	if props.range then
-		self.valueMin, self.valueMax = props.range[1], props.range[2]
-	end
-end
 
 ---@param x fixed_t
 ---@param y fixed_t
@@ -107,7 +96,6 @@ function Slider:draw(v)
 
 	gui.drawFill(v, l, t, w, h, style.bgColor)
 	gui.drawFill(v, l + FixedMul(w - cw, ratio), t, cw, h, style.cursorColor)
-	self:drawChildren(v)
 
 	-- local style = self.style
 	-- local l, t = self.cachedLeft, self.cachedTop
@@ -116,5 +104,4 @@ function Slider:draw(v)
 
 	-- gui.drawFill(v, l, t, w, h, style.bgColor)
 	-- gui.drawFill(v, l + w / 2 - cw / 2, t, cw, h, style.cursorColor)
-	-- self:drawChildren(v)
 end

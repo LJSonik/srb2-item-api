@@ -6,19 +6,16 @@ local gui = ljrequire "ljgui.common"
 ---@field root ljgui.Root
 ---@field mouse ljgui.Mouse
 ---@field eventManager ljgui.EventManager
----@field itemLayoutsToGenerate ljgui.Item[]
----@field itemsWithModifiedAttributes ljgui.Set<ljgui.Item>
-local Instance = gui.class()
+---@field dependencyManager ljgui.DependencyManager
+local Instance, base = gui.class()
 gui.Instance = Instance
 
 
 function Instance:__init()
 	gui.instance = self
 
-	self.itemLayoutsToGenerate = {}
-	self.itemsWithModifiedAttributes = {}
-
 	self.eventManager = gui.EventManager()
+	self.dependencyManager = gui.DependencyManager()
 
 	self.root = gui.Root()
 	gui.root = self.root
@@ -32,13 +29,30 @@ function Instance:update(v)
 	gui.root = self.root
 	gui.v = v
 
-	gui.propagateModifiedItemAttributes()
-	-- gui.generatePendingItemLayouts()
+	gui.instance.dependencyManager:propagateModifiedAttributes()
 
 	self.eventManager:update()
 
 	if self.mouse.enabled then return
 		self.mouse:update()
+	end
+end
+
+---@param v videolib
+---@param item ljgui.Item
+local function drawItem(v, item)
+	local l, t = item.cachedLeft, item.cachedTop
+	local r, b = l + item.width, t + item.height
+
+	if gui.pushDrawRegion(v, l, t, r, b) then
+		item:draw(v)
+
+		local children = item.children.items
+		for i = #children, 1, -1 do
+			drawItem(v, children[i])
+		end
+
+		gui.popDrawRegion()
 	end
 end
 
@@ -53,10 +67,9 @@ function Instance:draw(v)
 	gui.root = self.root
 	gui.v = v
 
-	gui.propagateModifiedItemAttributes()
-	-- gui.generatePendingItemLayouts()
+	gui.instance.dependencyManager:propagateModifiedAttributes()
 
-	self.root:draw(v)
+	drawItem(v, self.root)
 
 	if self.mouse.enabled then return
 		self.mouse:draw(v)

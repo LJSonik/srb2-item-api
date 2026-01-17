@@ -5,11 +5,6 @@ local mod = itemapi
 local gui = ljrequire "ljgui"
 
 
----@class itemapi.OptionsWindow : ljgui.Window
-local OptionsWindow, base = gui.class(gui.Window)
-mod.OptionsWindow = OptionsWindow
-
-
 ---@param grid ljgui.Item
 ---@param key keyevent_t
 ---@return boolean
@@ -69,43 +64,51 @@ local function makeLine(option, grid, children)
 	end
 end
 
-function OptionsWindow:__init(props)
-	local children = {}
-	for _, option in ipairs(mod.options) do
-		makeLine(option, self, children)
-	end
 
-	self.grid = gui.Grid {
-		fitParent = true,
+---@class itemapi.OptionsWindow : ljgui.Window
+local OptionsWindow = gui.addItem("OptionsWindow", {
+	base = gui.Window,
 
-		layout = "grid",
-		layout_gridColumns = 2,
+	baseProps = function(_, self)
+		local children = {}
+		for _, option in ipairs(mod.options) do
+			makeLine(option, self, children)
+		end
 
-		onKeyPress = onKeyPress,
+		self.grid = gui.Grid {
+			fitParent = true,
 
-		children = children
-	}
+			layout = "grid",
+			layout_gridColumns = 2,
 
-	base.__init(self, {
-		size = { 256*FU, 160*FU },
-		layout = "one_per_line",
+			onKeyPress = onKeyPress,
 
-		movable = false,
-		resizable = false,
-
-		self.grid,
-		gui.VerticalScrollbar {
-			target = self.grid,
-
-			autoHeight = "fit_parent",
-			autoLeft = "snap_to_parent_right"
+			children = children
 		}
-	})
 
-	gui.addKeyboardNavigationToGrid(self.grid, onNavigation)
+		gui.addKeyboardNavigationToGrid(self.grid, onNavigation)
 
-	self:applyProps(props)
-end
+		return {
+			size = { 256*FU, 160*FU },
+
+			movable = false,
+			resizable = false,
+
+			mainArea = {
+				layout = "one_per_line",
+
+				self.grid,
+				gui.VerticalScrollbar {
+					target = self.grid,
+
+					autoHeight = "fit_parent",
+					autoLeft = "snap_to_parent_right"
+				},
+			}
+		}
+	end
+})
+mod.OptionsWindow = OptionsWindow
 
 
 mod.addMenu("options", {

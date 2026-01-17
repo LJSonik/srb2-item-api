@@ -2,7 +2,9 @@
 local gui = ljrequire "ljgui.common"
 
 
----@class ljgui.Set<T>: { [T]: boolean }
+---@class ljgui.Set<T>: { [T]: true }
+---@class ljgui.Set2D<T1, T2>: { [T1]: { [T2]: true } }
+---@class ljgui.Table2D<K1, K2, V>: { [K1]: { [K2]: V } }
 
 
 ---@generic T : table
@@ -63,6 +65,21 @@ function gui.removeValueFromArray(array, element)
 	for i = #array, 1, -1 do
 		if array[i] == element then
 			table.remove(array, i)
+		end
+	end
+end
+
+---@generic T
+---@param array T[]
+---@param element T
+function gui.removeValueFromUnorderedArray(array, element)
+	local lastIndex = #array
+
+	for i = lastIndex, 1, -1 do
+		if array[i] == element then
+			array[i] = array[lastIndex]
+			array[lastIndex] = nil
+			lastIndex = lastIndex - 1
 		end
 	end
 end

@@ -1,7 +1,3 @@
----@class itemapi
-local mod = itemapi
-
-
 ---@class ljgui
 local gui = ljrequire "ljgui.common"
 
@@ -11,6 +7,7 @@ local gui = ljrequire "ljgui.common"
 ---@field column integer
 ---@field row integer
 ---@field item ljgui.Item
+
 
 ---@class ljgui.Item
 ---@field keyboardNav? ljgui.KeyboardNavigation
@@ -29,7 +26,7 @@ local function onKeyPress(item, key)
 	local numElems = item.children:getLength()
 	if numElems == 0 then return true end
 
-	local numColumns = item.layoutRules.gridColumns
+	local numColumns = item.layout.gridColumns
 	local numRows = (numElems - 1) / numColumns + 1
 
 	local nav = item.keyboardNav
@@ -39,16 +36,16 @@ local function onKeyPress(item, key)
 	local dc, dr = 0, 0
 	local keyName = key.name
 	if keyName == "left arrow"
-	or mod.isKeyBoundToGameControl(keyName, GC_STRAFELEFT) then
+	or keyName == input.keyNumToName(input.gameControlToKeyNum(GC_STRAFELEFT)) then
 		dc = -1
 	elseif keyName == "right arrow"
-	or mod.isKeyBoundToGameControl(keyName, GC_STRAFERIGHT) then
+	or keyName == input.keyNumToName(input.gameControlToKeyNum(GC_STRAFERIGHT)) then
 		dc = 1
 	elseif keyName == "up arrow"
-	or mod.isKeyBoundToGameControl(keyName, GC_FORWARD) then
+	or keyName == input.keyNumToName(input.gameControlToKeyNum(GC_FORWARD)) then
 		dr = -1
 	elseif keyName == "down arrow"
-	or mod.isKeyBoundToGameControl(keyName, GC_BACKWARD) then
+	or keyName == input.keyNumToName(input.gameControlToKeyNum(GC_BACKWARD)) then
 		dr = 1
 	else
 		return false

@@ -151,8 +151,80 @@ function mod.sendNetCommand_quickMoveInventoryItemBetweenPlayerAndContainer(srcI
 end
 
 
+---@param item ljgui.Item
+---@param v videolib
+local function drawSlot(item, v)
+	local window = item.parent.parent
+	local selectedIndex = (window.selectedSlotY - 1) * window.inventory.numColumns + window.selectedSlotX
+	local selected = (window.focused and selectedIndex == item.slotIndex)
+	local l, t = item.cachedLeft, item.cachedTop
+	local w, h = item.width, item.height
+
+	local bgColor = selected and 22 or 26
+	gui.drawFill(v, l, t, w, h, bgColor)
+
+	local draggedItem = mod.client.draggedInventoryItem
+	if draggedItem and draggedItem.window == window and draggedItem.slotIndex == item.slotIndex then
+		return
+	end
+
+	local type, quantity = window.inventory:get(item.slotIndex)
+	if not type then return end
+
+	mod.drawInventoryItemStack(v, type, quantity, l, t, selected)
+end
+
+
 ---@class itemapi.InventoryWindow : ljgui.Window
-local Inventory, base = gui.class(gui.Window)
+local Inventory, base = gui.addItem("InventoryWindow", {
+	base = gui.Window,
+
+	baseProps = function(props, self)
+		local inventory = props.inventory
+
+		self.numRows = (inventory.numSlots - 1) / inventory.numColumns + 1
+
+		local children = {}
+		for i = 1, inventory.numSlots do
+			local slot = gui.Rectangle {
+				size = { SLOT_SIZE, SLOT_SIZE },
+				style = { bgColor = 26 },
+				leftMargin = FU,
+				topMargin = FU,
+
+				onLeftMousePress = self.slot_onLeftMousePress,
+				onMouseMove = self.slot_onMouseMove,
+				onMouseLeave = self.slot_onMouseLeave,
+			}
+
+			slot.slotIndex = i
+			slot.draw = drawSlot
+
+			table.insert(children, slot)
+		end
+
+		return {
+			var_selectedSlotX = 1,
+			var_selectedSlotY = 1,
+			var_inventory = inventory,
+			var_isContainer = props.isContainer,
+
+			width = inventory.numColumns * (SLOT_SIZE + FU) + 3*FU,
+			height = self.numRows * (SLOT_SIZE + FU) + 11*FU,
+
+			movable = false,
+			resizable = false,
+
+			style = windowStyle,
+			onKeyPress = self.onKeyPress,
+
+			mainArea = {
+				layout = "flow",
+				children = children
+			}
+		}
+	end
+})
 mod.InventoryWindow = Inventory
 
 
@@ -496,29 +568,6 @@ local function calculateDefaultIconScale(def, patch)
 	return min(scale, maxScale)
 end
 
----@param item ljgui.Item
----@param v videolib
-local function drawSlot(item, v)
-	local window = item.parent.parent
-	local selectedIndex = (window.selectedSlotY - 1) * window.inventory.numColumns + window.selectedSlotX
-	local selected = (window.focused and selectedIndex == item.slotIndex)
-	local l, t = item.cachedLeft, item.cachedTop
-	local w, h = item.width, item.height
-
-	local bgColor = selected and 22 or 26
-	gui.drawFill(v, l, t, w, h, bgColor)
-
-	local draggedItem = mod.client.draggedInventoryItem
-	if draggedItem and draggedItem.window == window and draggedItem.slotIndex == item.slotIndex then
-		return
-	end
-
-	local type, quantity = window.inventory:get(item.slotIndex)
-	if not type then return end
-
-	mod.drawInventoryItemStack(v, type, quantity, l, t, selected)
-end
-
 ---@param v videolib
 function Inventory:draw(v)
 	base.draw(self, v)
@@ -533,52 +582,6 @@ function Inventory:draw(v)
 	local x = slot.cachedLeft + 6*FU
 	local y = slot.cachedTop - 6*FU
 	mod.drawInventoryItemStack(v, type, quantity, x, y, false)
-end
-
-function Inventory:__init(props)
-	local inventory = props.inventory
-
-	self.numRows = (inventory.numSlots - 1) / inventory.numColumns + 1
-
-	local children = {}
-	for i = 1, inventory.numSlots do
-		local slot = gui.Rectangle {
-			size = { SLOT_SIZE, SLOT_SIZE },
-			style = { bgColor = 26 },
-			leftMargin = FU,
-			topMargin = FU,
-
-			onLeftMousePress = self.slot_onLeftMousePress,
-			onMouseMove = self.slot_onMouseMove,
-			onMouseLeave = self.slot_onMouseLeave,
-		}
-
-		slot.slotIndex = i
-		slot.draw = drawSlot
-
-		table.insert(children, slot)
-	end
-
-	base.__init(self, {
-		var_selectedSlotX = 1,
-		var_selectedSlotY = 1,
-		var_inventory = inventory,
-		var_isContainer = props.isContainer,
-
-		width = inventory.numColumns * (SLOT_SIZE + FU) + 3*FU,
-		height = self.numRows * (SLOT_SIZE + FU) + 11*FU,
-
-		movable = false,
-		resizable = false,
-
-		layout = "flow",
-		style = windowStyle,
-		onKeyPress = self.onKeyPress,
-
-		children = children
-	})
-
-	self:applyProps(props)
 end
 
 

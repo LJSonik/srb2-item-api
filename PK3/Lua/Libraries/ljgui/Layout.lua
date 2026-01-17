@@ -4,46 +4,14 @@ local gui = ljrequire "ljgui.common"
 
 ---@alias ljgui.BaseBorderGetter fun(item: ljgui.Item): fixed_t, fixed_t, fixed_t, fixed_t
 
----@alias ljgui.LayoutGenerator fun(item: ljgui.Item)
 
----@class ljgui.AutoLayoutStrategy : ljgui.Class
----@field id string
----@field usedAttributes? string[]
----@field usedAttributesSet? ljgui.Set<string>
----@field usedSelfAttributes? string[]
----@field usedSelfAttributesSet? ljgui.Set<string>
----@field fields? string[]
----@field generator ljgui.LayoutGenerator
----@field parsed? boolean
+---@class ljgui.Layout
+---@field strategy string
 
----@alias ljgui.PositionOrSizeGenerator fun(item: ljgui.Item): fixed_t, fixed_t
-
----@class ljgui.AutoPositionOrSizeStrategy : ljgui.Class
----@field id string
----@field type "self"|"parent"|"children"
----@field usedAttributes? string[]
----@field usedSelfAttributes? string[]
----@field fields? string[]
----@field generator ljgui.PositionOrSizeGenerator
----@field parsed? boolean
 
 ---@class ljgui.LayoutRules
----@field placementMode? "include"|"exclude"|"placeholder"
----@field fitParent?     boolean
----
----@field autoLayout?   ljgui.AutoLayoutStrategy|string
----
----@field autoPosition? ljgui.AutoPositionOrSizeStrategy|string
----@field autoLeft?     ljgui.AutoPositionOrSizeStrategy|string
----@field autoTop?      ljgui.AutoPositionOrSizeStrategy|string
----
----@field autoSize?   ljgui.AutoPositionOrSizeStrategy|string
----@field autoWidth?  ljgui.AutoPositionOrSizeStrategy|string
----@field autoHeight? ljgui.AutoPositionOrSizeStrategy|string
----
----@field autoContentSize?   ljgui.AutoPositionOrSizeStrategy|string
----@field autoContentWidth?  ljgui.AutoPositionOrSizeStrategy|string
----@field autoContentHeight? ljgui.AutoPositionOrSizeStrategy|string
+-- ---@field placementMode? "include"|"exclude"|"placeholder"
+-- ---@field fitParent?     boolean
 ---
 ---@field leftMargin?   fixed_t
 ---@field topMargin?    fixed_t
@@ -56,50 +24,20 @@ local gui = ljrequire "ljgui.common"
 ---@field rightPadding?  fixed_t
 ---@field bottomPadding? fixed_t
 ---@field padding?       fixed_t
+
+
+---@class ljgui.LayoutStrategy
+---@field id string
+---@field params? string[]
+---@field compute fun(item: ljgui.Item)
 ---
----@field selfDependentAttributes?   table<string, ljgui.Set<string>>
----@field parentDependentAttributes? table<string, ljgui.Set<string>>
----@field childDependentAttributes?  table<string, ljgui.Set<string>>
-
----@type table<string, ljgui.AutoLayoutStrategy>
-gui.autoLayoutStrategies = {}
----@type table<string, ljgui.AutoPositionOrSizeStrategy>
-gui.autoPositionStrategies = {}
----@type table<string, ljgui.AutoPositionOrSizeStrategy>
-gui.autoSizeStrategies = {}
+---@field dependencies? table[]
+---@field dependency?   table
 
 
----@param strategy table
----@param list table<string, any>
-function gui.parseAutoStrategy(strategy)
-	strategy.usedAttributes = $ or {}
-	strategy.usedSelfAttributes = $ or {}
-	strategy.fields = $ or {}
+---@type { [string|ljgui.LayoutStrategy]: ljgui.LayoutStrategy }
+gui.layoutStrategies = {}
 
-	table.insert(strategy.usedSelfAttributes, "rooted")
-	strategy.usedAttributesSet = gui.arrayToSet(strategy.usedAttributes)
-	strategy.usedSelfAttributesSet = gui.arrayToSet(strategy.usedSelfAttributes)
-
-	strategy.parsed = true
-end
-
----@param strategy ljgui.AutoLayoutStrategy
-function gui.addAutoLayoutStrategy(strategy)
-	gui.parseAutoStrategy(strategy)
-	gui.autoLayoutStrategies[strategy.id] = strategy
-end
-
----@param strategy ljgui.AutoPositionOrSizeStrategy
-function gui.addAutoPositionStrategy(strategy)
-	gui.parseAutoStrategy(strategy)
-	gui.autoPositionStrategies[strategy.id] = strategy
-end
-
----@param strategy ljgui.AutoPositionOrSizeStrategy
-function gui.addAutoSizeStrategy(strategy)
-	gui.parseAutoStrategy(strategy)
-	gui.autoSizeStrategies[strategy.id] = strategy
-end
 
 ---@param item ljgui.Item
 function gui.getDefaultBaseBorder(item)
@@ -108,110 +46,7 @@ function gui.getDefaultBaseBorder(item)
 end
 
 ---@param rules ljgui.LayoutRules
----@param list table
----@param field1 string
----@param field2? string
----@param shortcutField? string
-local function parseRulePair(rules, list, field1, field2, shortcutField)
-	if shortcutField then
-		local auto = rules[shortcutField]
-		if auto then
-			rules[field1], rules[field2] = auto, auto
-		end
-	end
-
-	local auto1 = rules[field1]
-
-	if type(auto1) == "string" then
-		local strategy = list[auto1]
-		if not strategy then
-			error('invalid layout strategy "' .. auto1 .. '"')
-		end
-
-		auto1 = strategy
-		rules[field1] = auto1
-	end
-
-	if auto1 and not auto1.parsed then
-		gui.parseAutoStrategy(auto1)
-	end
-
-	if field2 then
-		local auto2 = rules[field2]
-
-		if type(rules[field2]) == "string" then
-			local strategy = list[auto2]
-			if not strategy then
-				error('invalid layout strategy "' .. auto2 .. '"')
-			end
-
-			auto2 = strategy
-			rules[field2] = auto2
-		end
-
-		if auto2 and not auto2.parsed then
-			gui.parseAutoStrategy(auto2)
-		end
-	end
-end
-
----@param rules ljgui.LayoutRules
----@param autoName string
----@param dstAttr string
-local function parseAutoRule(rules, autoName, dstAttr)
-	local auto = rules[autoName]
-	if not auto then return end
-
-	local selfDeps = rules.selfDependentAttributes
-	local selfAttrs = auto.usedSelfAttributes
-	for i = 1, #selfAttrs do
-		local attr = selfAttrs[i]
-		selfDeps[attr] = $ or {}
-		selfDeps[attr][dstAttr] = true
-	end
-
-	if auto.type ~= "self" then
-		local deps = (auto.type == "parent")
-			and rules.parentDependentAttributes
-			or rules.childDependentAttributes
-
-		local attrs = auto.usedAttributes
-		for i = 1, #attrs do
-			local attr = attrs[i]
-			deps[attr] = $ or {}
-			deps[attr][dstAttr] = true
-		end
-	end
-end
-
----@param rules ljgui.LayoutRules
-local function parseDependentAttributes(rules)
-	rules.selfDependentAttributes = {}
-	rules.parentDependentAttributes = {}
-	rules.childDependentAttributes = {}
-
-	parseAutoRule(rules, "autoLeft", "left")
-	parseAutoRule(rules, "autoTop", "top")
-	parseAutoRule(rules, "autoWidth", "width")
-	parseAutoRule(rules, "autoHeight", "height")
-	parseAutoRule(rules, "autoContentWidth", "contentWidth")
-	parseAutoRule(rules, "autoContentHeight", "contentHeight")
-end
-
----@param rules ljgui.LayoutRules
 function gui.parseLayoutRules(rules)
-	parseRulePair(rules, gui.autoLayoutStrategies, "autoLayout")
-	parseRulePair(rules, gui.autoPositionStrategies, "autoLeft", "autoTop", "autoPosition")
-	-- parseRulePair(rules, gui.autoPositionStrategies, "autoPosition")
-	parseRulePair(rules, gui.autoSizeStrategies, "autoWidth", "autoHeight", "autoSize")
-	parseRulePair(rules, gui.autoSizeStrategies, "autoContentWidth", "autoContentHeight", "autoContentSize")
-
-	parseDependentAttributes(rules)
-
-	local auto = rules.autoLeft or rules.autoTop or rules.autoWidth or rules.autoHeight
-		or rules.autoContentWidth or rules.autoContentHeight
-	rules.dependencyType = auto and auto.type
-
 	rules.placementMode = $ or "include"
 
 	rules.leftMargin = $ or 0
@@ -225,204 +60,122 @@ function gui.parseLayoutRules(rules)
 	rules.bottomPadding = $ or 0
 end
 
--- ---@param rules ljgui.LayoutRules
--- function gui.parseLayoutRules(rules)
--- 	if type(rules.autoLayout) == "string" then
--- 		rules.autoLayout = gui.autoLayoutStrategies[rules.autoLayout]
--- 	end
--- 	if type(rules.autoPosition) == "string" then
--- 		rules.autoPosition = gui.autoPositionStrategies[rules.autoPosition]
--- 	end
+---@param id string
+---@param strategy ljgui.LayoutStrategy
+---@return ljgui.LayoutStrategy
+function gui.addLayoutStrategy(id, strategy)
+	if id then
+		strategy.id = id
+		gui.layoutStrategies[id] = strategy
+	else
+		gui.layoutStrategies[strategy] = strategy
+	end
 
--- 	local autoSize = rules.autoSize
--- 	if autoSize then
--- 		rules.autoWidth, rules.autoHeight = autoSize, autoSize
--- 	end
--- 	if type(rules.autoWidth) == "string" then
--- 		rules.autoWidth = gui.autoSizeStrategies[rules.autoWidth]
--- 	end
--- 	if type(rules.autoHeight) == "string" then
--- 		rules.autoHeight = gui.autoSizeStrategies[rules.autoHeight]
--- 	end
+	strategy.dependencies = $ or { strategy.dependency }
+	strategy.params = $ or {}
 
--- 	autoSize = rules.autoContentSize
--- 	if autoSize then
--- 		rules.autoContentWidth, rules.autoContentHeight = autoSize, autoSize
--- 	end
--- 	if type(rules.autoContentWidth) == "string" then
--- 		rules.autoContentWidth = gui.autoSizeStrategies[rules.autoContentWidth]
--- 	end
--- 	if type(rules.autoContentHeight) == "string" then
--- 		rules.autoContentHeight = gui.autoSizeStrategies[rules.autoContentHeight]
--- 	end
+	return strategy
+end
 
--- 	local auto = rules.autoPosition or rules.autoWidth or rules.autoHeight
--- 		or rules.autoContentWidth or rules.autoContentHeight
--- 	rules.dependencyType = auto and auto.type
+---@param methodName string
+---@param item ljgui.Item
+local function addOrRemoveLayoutDependencies(methodName, item)
+	local strategy = gui.layoutStrategies[item.layout.strategy]
+	local manager = gui.instance.dependencyManager
+	local method = manager[methodName]
 
--- 	rules.placementMode = $ or "include"
--- end
+	for _, dep in ipairs(strategy.dependencies) do
+		if dep[1] == "self" then
+			method(manager, item, dep[2], item, "layout")
+		elseif dep[1] == "children" then
+			for _, child in item.children:iterate() do
+				method(manager, child, dep[2], item, "layout")
+			end
+		end
+	end
 
--- ---@param item ljgui.Item
--- ---@param autoWidth ljgui.AutoPositionOrSizeStrategy
--- ---@param autoHeight ljgui.AutoPositionOrSizeStrategy
--- ---@param dependencyType? string
--- ---@return fixed_t
--- ---@return fixed_t
--- local function calculateAutoSize(item, autoWidth, autoHeight, dependencyType)
--- 	if autoWidth and autoHeight and autoWidth.generator == autoHeight.generator
--- 	and autoWidth.type == dependencyType then
--- 		return autoWidth.generator(item)
--- 	else
--- 		local w, h, _
--- 		if autoWidth and autoWidth.type == dependencyType then
--- 			w = autoWidth.generator(item)
--- 		end
--- 		if autoHeight and autoHeight.type == dependencyType then
--- 			_, h = autoHeight.generator(item)
--- 		end
--- 		return w, h
--- 	end
--- end
+	for _, child in item.children:iterate() do
+		method(manager, item, "layout", child, "left")
+		method(manager, item, "layout", child, "top")
+	end
+end
 
--- ---@param item ljgui.Item
--- function gui.generateLayout(item)
--- 	local rules = item.layoutRules
+---@param item ljgui.Item
+---@param layout? ljgui.Layout|string
+function gui.setItemLayout(item, layout)
+	if type(layout) == "string" then
+		layout = { strategy = layout }
+	end
 
--- 	if rules then
--- 		local w, h = calculateAutoSize(item, rules.autoWidth, rules.autoHeight, nil)
--- 		item:resizeRaw(w, h)
+	if item.rooted then
+		gui.updateLayoutDependenciesBeforeUnrootingItem(item)
+	end
 
--- 		w, h = calculateAutoSize(item, rules.autoContentWidth, rules.autoContentHeight, nil)
--- 		item:resizeContentRaw(w, h)
+	item.layout = layout
 
--- 		if item.parent and rules.dependencyType == "parent" then
--- 			w, h = calculateAutoSize(item, rules.autoWidth, rules.autoHeight, "parent")
--- 			item:resizeRaw(w, h)
+	if item.rooted then
+		gui.updateLayoutDependenciesAfterRootingItem(item)
+	end
+end
 
--- 			w, h = calculateAutoSize(item, rules.autoContentWidth, rules.autoContentHeight, "parent")
--- 			item:resizeContentRaw(w, h)
+---@param child ljgui.Item
+function gui.updateLayoutDependenciesAfterAttachingChild(child)
+	local parent = child.parent
+	if not parent.layout then return end
 
--- 			local autoPosition = rules.autoPosition
--- 			if autoPosition and autoPosition.type == "parent" then
--- 				local l, t = autoPosition.generator(item)
--- 				item:moveRaw(l, t)
--- 			end
--- 		end
--- 	end
+	local strategy = gui.layoutStrategies[parent.layout.strategy]
+	local manager = gui.instance.dependencyManager
 
--- 	-- Make sure all children have their sizes calculated before generating the layout
--- 	for _, child in item.children:iterate() do
--- 		if not child.layoutGenerated then
--- 			gui.generateLayout(child)
--- 		end
--- 	end
+	for _, dep in ipairs(strategy.dependencies) do
+		if dep[1] == "self" then
+			manager:addDependency(parent, dep[2], parent, "layout")
+		elseif dep[1] == "children" then
+			manager:addDependency(child, dep[2], parent, "layout")
+		end
+	end
 
--- 	if rules then
--- 		-- Generate the layout
--- 		local generator = rules.autoLayout and rules.autoLayout.generator
--- 		if generator then
--- 			generator(item)
--- 		end
+	manager:addDependency(parent, "layout", child, "left")
+	manager:addDependency(parent, "layout", child, "top")
 
--- 		if rules.dependencyType == "children" then
--- 			w, h = calculateAutoSize(item, rules.autoWidth, rules.autoHeight, "children")
--- 			item:resizeRaw(w, h)
+	manager:markAttributeForComputation(parent, "layout")
+end
 
--- 			w, h = calculateAutoSize(item, rules.autoContentWidth, rules.autoContentHeight, "children")
--- 			item:resizeContentRaw(w, h)
+---@param child ljgui.Item
+function gui.updateLayoutDependenciesBeforeDetachingChild(child)
+	local parent = child.parent
+	if not parent.layout then return end
 
--- 			local autoPosition = rules.autoPosition
--- 			if autoPosition and autoPosition.type == "children" then
--- 				local l, t = autoPosition.generator(item)
--- 				item:moveRaw(l, t)
--- 			end
--- 		end
--- 	end
+	local strategy = gui.layoutStrategies[parent.layout.strategy]
+	local manager = gui.instance.dependencyManager
 
--- 	item.layoutGenerated = true
--- end
+	for _, dep in ipairs(strategy.dependencies) do
+		if dep[1] == "self" then
+			manager:removeDependency(parent, dep[2], parent, "layout")
+		elseif dep[1] == "children" then
+			manager:removeDependency(child, dep[2], parent, "layout")
+		end
+	end
 
--- ---@param item ljgui.Item
--- ---@param chainStarts ljgui.Set<ljgui.Item>
--- local function checkParents(item, chainStarts)
--- 	-- Chain start will be moved to the highest ancestor later
--- 	chainStarts[item] = nil
+	manager:removeDependency(parent, "layout", child, "left")
+	manager:removeDependency(parent, "layout", child, "top")
+end
 
--- 	while true do
--- 		local parent = item.parent
--- 		local rules = parent and parent.layoutRules
+---@param item ljgui.Item
+function gui.updateLayoutDependenciesAfterRootingItem(item)
+	if not item.layout then return end
 
--- 		if parent and parent.layoutGenerated
--- 		and rules and (rules.autoPosition and rules.autoPosition.type == "children"
--- 		or rules.autoSize and rules.autoSize.type == "children") then
--- 			item = parent
--- 			item.layoutGenerated = false
--- 		else
--- 			if parent then
--- 				if parent.layoutGenerated then
--- 					-- Highest ancestor in chain
--- 					chainStarts[parent] = true
--- 					parent.layoutGenerated = false
--- 				end
--- 			else
--- 				-- Highest ancestor in chain
--- 				chainStarts[item] = true
--- 			end
+	addOrRemoveLayoutDependencies("addDependency", item)
 
--- 			break
--- 		end
--- 	end
--- end
+	-- This will calculate the new positions for all the children at once
+	local strategy = gui.layoutStrategies[item.layout.strategy]
+	gui.instance.dependencyManager:setComputationCallback(item, "layout", strategy.compute)
+	gui.instance.dependencyManager:markAttributeForComputation(item, "layout")
+end
 
--- ---@param item ljgui.Item
--- ---@param chainStarts ljgui.Set<ljgui.Item>
--- local function checkChildren(item, chainStarts)
--- 	for _, child in item.children:iterate() do
--- 		local rules = child.layoutRules
--- 		if rules then
--- 			local autoPosition = rules.autoPosition
--- 			local autoSize = rules.autoSize
+---@param item ljgui.Item
+function gui.updateLayoutDependenciesBeforeUnrootingItem(item)
+	if not item.layout then return end
 
--- 			if autoPosition and autoPosition.type == "parent"
--- 			or autoSize and autoSize.type == "parent" then
--- 				if chainStarts[child] then
--- 					chainStarts[child] = nil
--- 				else
--- 					child.layoutGenerated = false
--- 					checkChildren(child, chainStarts)
--- 				end
--- 			end
--- 		end
--- 	end
--- end
-
--- ---@return ljgui.Set<ljgui.Item>
--- local function findLayoutDependencyChainStarts()
--- 	local pendingItems = gui.instance.itemLayoutsToGenerate
--- 	---@type ljgui.Set<ljgui.Item>
--- 	local chainStarts = gui.arrayToSet(pendingItems)
-
--- 	for i = 1, #pendingItems do
--- 		local item = pendingItems[i]
-
--- 		if not item.layoutGenerated and item.rooted then
--- 			checkParents(item, chainStarts)
--- 			checkChildren(item, chainStarts)
--- 		end
--- 	end
-
--- 	return chainStarts
--- end
-
--- function gui.generatePendingItemLayouts()
--- 	local items = findLayoutDependencyChainStarts()
-
--- 	for item, _ in pairs(items) do
--- 		if not item.layoutGenerated and item.rooted then
--- 			gui.generateLayout(item)
--- 		end
--- 	end
-
--- 	gui.instance.itemLayoutsToGenerate = {}
--- end
+	addOrRemoveLayoutDependencies("removeDependency", item)
+	gui.instance.dependencyManager:setComputationCallback(item, "layout", nil)
+end

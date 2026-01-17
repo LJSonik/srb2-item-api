@@ -17,6 +17,25 @@ function gui.dumpItems()
 end
 
 ---@param item ljgui.Item
+local function dumpItemTree(item)
+	item:dumpInfo()
+
+	enterfunc "{"
+
+	for _, child in item.children:iterate() do
+		dumpItemTree(child)
+	end
+
+	exitfunc "}"
+end
+
+function gui.dumpItemTree(item)
+	enterfunc "DUMP ITEM TREE {"
+	dumpItemTree(item or gui.root)
+	exitfunc "} DUMP ITEM TREE"
+end
+
+---@param item ljgui.Item
 function gui.dumpItem(item)
 	local infos = {}
 

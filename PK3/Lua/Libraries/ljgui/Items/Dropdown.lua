@@ -10,7 +10,28 @@ local gui = ljrequire "ljgui.common"
 ---@field style ljgui.DropdownStyle
 ---@field pointed boolean
 ---@field text string
-local Dropdown, base = gui.class(gui.Item)
+local Dropdown = gui.addItem("Dropdown", {
+	setup = function(self, props)
+		self.pointed = false
+
+		self:addEvent("LeftMousePress", self.onLeftMousePress)
+		self:addEvent("MouseEnter", self.onMouseEnter)
+		self:addEvent("MouseLeave", self.onMouseLeave)
+		self:addEvent("Unroot", self.onUnroot)
+	end,
+
+	applyCustomProps = function(self, props)
+		if props.text then
+			self:setText(props.text)
+		end
+		if props.options then
+			self:setOptions(props.options)
+		end
+		if props.listStyle then
+			self:setListStyle(props.listStyle)
+		end
+	end,
+})
 gui.Dropdown = Dropdown
 
 
@@ -29,32 +50,6 @@ Dropdown.defaultStyle = {
 	}
 }
 
-
-function Dropdown:__init(props)
-	base.__init(self)
-
-	self.debug = "Dropdown"
-
-	if props then
-		self:build(props)
-	end
-
-	self.pointed = false
-
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-	self:addEvent("MouseEnter", self.onMouseEnter)
-	self:addEvent("MouseLeave", self.onMouseLeave)
-	self:addEvent("Unroot", self.onUnroot)
-end
-
-function Dropdown:build(props)
-	self:applyProps(props)
-
-	self:setText(props.text)
-
-	self:setOptions(props.options)
-	self:setListStyle(props.listStyle)
-end
 
 ---@param text string
 function Dropdown:setText(text)
@@ -122,8 +117,6 @@ function Dropdown:draw(v)
 	if text then
 		local x = self.cachedLeft + self.width / 2
 		local y = self.cachedTop + self.height / 2 - 2*FU
-		v.drawString(x, y, text, V_ALLOWLOWERCASE, "small-fixed-center") // !!!
+		v.drawString(x, y, text, V_ALLOWLOWERCASE, "small-fixed-center") -- !!!
 	end
-
-	self:drawChildren(v)
 end

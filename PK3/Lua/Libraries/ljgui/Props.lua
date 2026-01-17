@@ -3,12 +3,28 @@ local gui = ljrequire "ljgui.common"
 
 
 ---@class ljgui.ItemProps
----@field parsed?      boolean
----@field children?    ljgui.Item[]
+---@field parsed?   boolean
+---@field children? ljgui.Item[]
+---
+---@field layout?      ljgui.Layout
 ---@field layoutRules? ljgui.LayoutRules
----@field style?       fixed_t
----@field styleRules?  table
----@field fitParent?   boolean
+---
+---@field autoLeft?     string|table
+---@field autoTop?      string|table
+---@field autoPosition? string|table
+---
+---@field autoWidth?  string|table
+---@field autoHeight? string|table
+---@field autoSize?   string|table
+---
+---@field autoContentLeft? string|table
+---@field autoContentTop?  string|table
+---@field autoContentSize? string|table
+---
+---@field fitParent? boolean
+---
+---@field style?      fixed_t
+---@field styleRules? table
 ---
 ---@field size?   fixed_t[]
 ---@field width?  fixed_t
@@ -33,15 +49,15 @@ local gui = ljrequire "ljgui.common"
 ---@field update? fun(item: ljgui.Item)
 ---@field draw?   fun(item: ljgui.Item, v: videolib)
 
-local autoRuleNames = { "autoLayout", "autoLeft", "autoTop" }
+
+local autoAttrPairs = {
+	{ "left"       , "top"       , "autoLeft"       , "autoTop"       , "autoPosition"    },
+	{ "width"      , "height"    , "autoWidth"      , "autoHeight"    , "autoSize"        },
+	{ "contentLeft", "contentTop", "autoContentLeft", "autoContentTop", "autoContentSize" },
+}
 
 local layoutFieldNames = {
-	"placementMode", "fitParent",
-
-	"autoLayout",
-	"autoPosition", "autoLeft", "autoTop",
-	"autoSize", "autoWidth", "autoHeight",
-	"autoContentSize", "autoContentWidth", "autoContentHeight",
+	"placementMode",
 
 	"leftMargin", "topMargin",
 	"rightMargin", "bottomMargin",
@@ -110,35 +126,62 @@ local function parseLayoutRules(props)
 		rules.rightPadding, rules.bottomPadding = padding[3], padding[4]
 	end
 
-	if rules.fitParent then
-		rules.autoPosition = "Center"
-		rules.autoSize = "FitParent"
+	gui.parseLayoutRules(rules)
+end
+
+---@param props ljgui.ItemProps
+local function parseLayout(props)
+	local layout = props.layout
+	if not layout then return end
+
+	if type(layout) == "string" then
+		local strategy = gui.layoutStrategies[layout]
+		if not strategy then
+			error('unknown layout strategy "' .. layout .. '"')
+		end
+
+		layout = { strategy = layout }
+		props.layout = layout
 	end
 
-	gui.parseLayoutRules(rules)
+	local strategy = gui.layoutStrategies[layout.strategy]
 
-	-- if not rules.autoLayout then
-	-- 	rules.autoLayout = gui.autoLayoutStrategies["OnePerLine"]
-	-- end
-
-	for _, ruleName in ipairs(autoRuleNames) do
-		if rules[ruleName] then
-			for _, k in ipairs(rules[ruleName].fields) do
-				-- !!! Old system
-				if props[k] ~= nil then
-					rules[k] = props[k]
-				end
-
-				local fullRuleName = ruleName .. "_" .. k
-				if props[fullRuleName] ~= nil then
-					rules[fullRuleName] = props[fullRuleName]
-				end
+	-- e.g. layout="flow", layout_mainDirection="left" => layout = { strategy="flow", mainDirection="left" }
+	if strategy then
+		for _, paramName in ipairs(strategy.params) do
+			local fieldValue = props["layout_" .. paramName]
+			if fieldValue ~= nil then
+				layout[paramName] = fieldValue
 			end
 		end
 	end
+end
 
-	if rules.autoLeft or rules.autoTop then
-		rules.placementMode = "exclude"
+---@param props ljgui.ItemProps
+---@param attrName string
+---@param fieldName string
+local function parseAutoField(props, attrName, fieldName)
+	local field = props[fieldName]
+	if not field then return end
+
+	if type(field) == "string" then
+		local strategy = gui.autoAttributeStrategies[attrName][field]
+		if not strategy then
+			error('unknown auto-attribute strategy "' .. field .. '"')
+		end
+
+		field = { strategy = field }
+		props[fieldName] = field
+	end
+
+	local strategy = gui.autoAttributeStrategies[attrName][field.strategy]
+
+	-- e.g. autoX="snap_left", autoX_snapDist=42*FU => autoX = { strategy="snap_left", snapDist=42*FU }
+	for _, paramName in ipairs(strategy.params) do
+		local fieldValue = props[fieldName .. "_" .. paramName]
+		if fieldValue ~= nil then
+			field[paramName] = fieldValue
+		end
 	end
 end
 
@@ -169,7 +212,7 @@ function gui.parseItemProps(item, props)
 		for _, k in ipairs(propsStyleFieldNames) do
 			local prop = props.style[k]
 			if prop ~= nil then
-				error("setting margin in style table is deprecated")
+				error("setting margin or padding in style tables is deprecated")
 				props[k] = prop
 			end
 		end
@@ -179,6 +222,27 @@ function gui.parseItemProps(item, props)
 		if props[k] == nil then
 			props[k] = 0
 		end
+	end
+
+	parseLayout(props)
+
+	-- Convenient shortcut!
+	if props.fitParent then
+		props.autoPosition = "center"
+		props.autoSize = "fit_parent"
+	end
+
+	for _, autoPair in ipairs(autoAttrPairs) do
+		-- e.g. autoSize => autoWidth + autoHeight
+		local shortcutName = autoPair[5]
+		if shortcutName and props[shortcutName] then
+			local field = props[shortcutName]
+			props[autoPair[3]], props[autoPair[4]] = field, field
+			props[shortcutName] = nil
+		end
+
+		parseAutoField(props, autoPair[1], autoPair[3])
+		parseAutoField(props, autoPair[2], autoPair[4])
 	end
 
 	parseLayoutRules(props)
@@ -214,7 +278,7 @@ function gui.applyItemProps(item, props)
 	if props.style then
 		item:setStyle(props.style)
 	elseif not item.style then
-		item:setStyle(item.defaultStyle)
+		item:setStyle(item.defaultStyle) -- !!!
 	end
 
 	for k, v in pairs(props) do
@@ -224,6 +288,20 @@ function gui.applyItemProps(item, props)
 
 		if k:sub(1, 4) == "var_" then
 			item[k:sub(5)] = v
+		end
+	end
+
+	if props.layout then
+		gui.setItemLayout(item, props.layout)
+	end
+
+	for _, autoPair in ipairs(autoAttrPairs) do
+		if props[autoPair[3]] then
+			gui.setItemAutoAttribute(item, autoPair[1], props[autoPair[3]])
+		end
+
+		if props[autoPair[4]] then
+			gui.setItemAutoAttribute(item, autoPair[2], props[autoPair[4]])
 		end
 	end
 

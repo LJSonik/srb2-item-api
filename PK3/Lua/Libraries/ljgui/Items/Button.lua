@@ -12,7 +12,27 @@ local gui = ljrequire "ljgui.common"
 ---@field pointed boolean
 ---@field pressed boolean
 ---@field text string
-local Button, base = gui.class(gui.Item)
+local Button = gui.addItem("Button", {
+	setup = function(self)
+		self.pointed = false
+		self.pressed = false
+
+		self:addEvent("LeftMousePress", self.onLeftMousePress)
+		self:addEvent("MouseEnter", self.onMouseEnter)
+		self:addEvent("MouseLeave", self.onMouseLeave)
+		self:addEvent("KeyPress", self.onKeyPress)
+	end,
+
+	applyCustomProps = function(self, props)
+		if props.action then
+			self:addEvent("Trigger", props.action)
+		end
+
+		if props.text then
+			self:setText(props.text)
+		end
+	end,
+})
 gui.Button = Button
 
 
@@ -39,33 +59,6 @@ Button.defaultStyle = {
 	}
 }
 
-
-function Button:__init(props)
-	base.__init(self)
-
-	self.debug = "Button"
-
-	if props then
-		self:build(props)
-	end
-
-	self.pointed = false
-	self.pressed = false
-
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-	self:addEvent("MouseEnter", self.onMouseEnter)
-	self:addEvent("MouseLeave", self.onMouseLeave)
-	self:addEvent("KeyPress", self.onKeyPress)
-end
-
-function Button:build(props)
-	self:applyProps(props)
-
-	if props.action then
-		self:addEvent("Trigger", props.action)
-	end
-	self:setText(props.text)
-end
 
 ---@param text string
 function Button:setText(text)
@@ -97,9 +90,9 @@ function Button:onMouseLeave()
 end
 
 ---@param key keyevent_t
----@return boolean
+---@return boolean?
 function Button:onKeyPress(key)
-	if key.name ~= "enter" then return end
+	if key.name ~= "enter" then return nil end
 	gui.instance.eventManager:callItemEvent(self, "Trigger")
 	return true
 end
@@ -120,8 +113,6 @@ function Button:draw(v)
 	if text then
 		local x = self.cachedLeft + self.width / 2
 		local y = self.cachedTop + self.height / 2 - 2*FU
-		v.drawString(x, y, text, V_ALLOWLOWERCASE, "small-fixed-center") // !!!
+		v.drawString(x, y, text, V_ALLOWLOWERCASE, "small-fixed-center") -- !!!
 	end
-
-	self:drawChildren(v)
 end

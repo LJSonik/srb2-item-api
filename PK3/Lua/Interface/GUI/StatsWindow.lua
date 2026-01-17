@@ -16,11 +16,6 @@ local windowStyle = {
 }
 
 
----@class itemapi.StatsWindow : ljgui.Window
-local Stats, base = gui.class(gui.Window)
-mod.StatsWindow = Stats
-
-
 ---@param item ljgui.Item
 ---@param v videolib
 local function drawStats(item, v)
@@ -55,19 +50,27 @@ local function drawStats(item, v)
 	y = y + 5*FU
 end
 
-function Stats:__init(props)
-	base.__init(self, {
+
+---@class itemapi.StatsWindow : ljgui.Window
+local Stats = gui.addItem("StatsWindow", {
+	base = gui.Window,
+
+	baseProps = {
 		width = 64*FU,
 		height = 32*FU,
 
 		movable = false,
 		resizable = false,
 
-		layout = "flow",
-		style = windowStyle
-	})
+		style = windowStyle,
 
-	self.mainArea.draw = drawStats
+		mainArea = {
+			layout = "flow"
+		}
+	},
 
-	self:applyProps(props)
-end
+	setup = function(self)
+		self.mainArea.draw = drawStats
+	end,
+})
+mod.StatsWindow = Stats

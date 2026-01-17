@@ -7,7 +7,13 @@ local gui = ljrequire "ljgui.common"
 
 
 ---@class ljgui.PaletteColorPicker : ljgui.Item
-local Picker, base = gui.class(gui.Item)
+local Picker = gui.addItem("PaletteColorPicker", {
+	setup = function(self)
+		self:addEvent("MouseMove", self.onMouseMove)
+		self:addEvent("MouseLeave", self.onMouseLeave)
+		self:addEvent("LeftMousePress", self.onLeftMousePress)
+	end
+})
 gui.PaletteColorPicker = Picker
 
 
@@ -16,20 +22,6 @@ Picker.defaultStyle = {
 	bgColor = 31
 }
 
----@param props ljgui.ItemProps
-function Picker:__init(props)
-	base.__init(self)
-
-	self.debug = "PaletteColorPicker"
-
-	if props then
-		self:build(props)
-	end
-
-	self:addEvent("MouseMove", self.onMouseMove)
-	self:addEvent("MouseLeave", self.onMouseLeave)
-	self:addEvent("LeftMousePress", self.onLeftMousePress)
-end
 
 function Picker:getCellSize()
 	return self.width / 16
@@ -91,6 +83,4 @@ function Picker:draw(v)
 			color
 		)
 	end
-
-	self:drawChildren(v)
 end

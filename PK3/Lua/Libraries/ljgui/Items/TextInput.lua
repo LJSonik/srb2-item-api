@@ -5,7 +5,12 @@ local gui = ljrequire "ljgui.common"
 ---@class ljgui.TextInput : ljgui.Item
 ---@field text string
 ---@field shiftHeld boolean
-local Input, base = gui.class(gui.Item)
+local Input = gui.addItem("TextInput", {
+	setup = function(self)
+		self.text = "You're supposed to type something here, buddy..."
+		self.shiftHeld = false
+	end
+})
 gui.TextInput = Input
 
 
@@ -15,23 +20,6 @@ Input.defaultStyle = {
 	margin = { FU, FU, FU, FU }
 }
 
-
-function Input:__init(props)
-	base.__init(self)
-
-	self.debug = "TextInput"
-
-	if props then
-		self:build(props)
-	end
-end
-
-function Input:build(props)
-	self:applyProps(props)
-
-	self.text = "You're supposed to type something here, buddy..."
-	self.shiftHeld = false
-end
 
 /*---@param key keyevent_t
 function Input:onKeyDown(key)
@@ -72,5 +60,4 @@ end
 function Input:draw(v)
 	self:drawText(v)
 	self:drawCursor(v)
-	self:drawChildren(v)
 end

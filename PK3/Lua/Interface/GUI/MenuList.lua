@@ -5,8 +5,39 @@ local mod = itemapi
 local gui = ljrequire "ljgui"
 
 
+---@param element ljgui.Button
+local function onElementTrigger(element)
+	mod.selectMenu(element.menuID)
+	mod.focusMenu()
+end
+
+
 ---@class itemapi.MenuListUI : ljgui.Rectangle
-local MenuList, base = gui.class(gui.Rectangle)
+local MenuList = gui.addItem("MenuListUI", {
+	base = gui.Rectangle,
+
+	baseProps = function(_, self)
+		local children = {}
+		for _, def in ipairs(mod.menuDefs) do
+			table.insert(children, gui.Button {
+				var_menuID = def.id,
+
+				text = def.name,
+				width = 48*FU,
+
+				onTrigger = onElementTrigger,
+			})
+		end
+
+		return {
+			layout = "one_per_line",
+			autoSize = "fit_children",
+			onKeyPress = self.onKeyPress,
+
+			children = children
+		}
+	end
+})
 mod.MenuListUI = MenuList
 
 
@@ -58,34 +89,4 @@ function MenuList:onKeyPress(key)
 	end
 
 	return false
-end
-
----@param element ljgui.Button
-local function onElementTrigger(element)
-	mod.selectMenu(element.menuID)
-	mod.focusMenu()
-end
-
-function MenuList:__init(props)
-	local children = {}
-	for _, def in ipairs(mod.menuDefs) do
-		table.insert(children, gui.Button {
-			var_menuID = def.id,
-
-			text = def.name,
-			width = 48*FU,
-
-			onTrigger = onElementTrigger,
-		})
-	end
-
-	base.__init(self, {
-		layout = "one_per_line",
-		autoSize = "fit_children",
-		onKeyPress = self.onKeyPress,
-
-		children = children
-	})
-
-	self:applyProps(props)
 end
