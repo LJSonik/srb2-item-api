@@ -69,6 +69,7 @@ end
 function mod.uninitialiseMap()
 	mod.uninitialiseTickers()
 	mod.uninitialiseModels()
+	mod.uninitialiseInworldUIs()
 	mod.uninitialiseActions()
 
 	if mod.client.mapInitialised then
@@ -132,6 +133,7 @@ end
 
 function mod.updateClient()
 	mod.updateInterface() -- !!! INTERFACE
+	mod.updateInworldUIAvatars()
 	mod.updateClientTickers()
 	mod.updateCulling()
 
@@ -142,6 +144,7 @@ function mod.initialiseClientMap()
 	mod.client_initialiseTickers()
 	mod.initialiseVisualCulling()
 	mod.initialiseModelAvatars()
+	mod.initialiseInworldUIAvatars()
 
 	mod.client.mapInitialised = true
 end
@@ -150,6 +153,7 @@ function mod.uninitialiseClientMap()
 	mod.client_uninitialiseTickers()
 	mod.uninitialiseVisualCulling()
 	mod.uninitialiseModelAvatars()
+	mod.uninitialiseInworldUIAvatars()
 	mod.uninitialiseActionTargetIcon() -- !!! INTERFACE
 	mod.closeUI() -- !!! INTERFACE
 
